@@ -1,14 +1,9 @@
-local ADDON_NAME = ...
+local mainUI = CreateFrame("Frame")
+mainUI:RegisterEvent("LOOT_OPENED")
 
-FarmTracker = FarmTracker or {}
-FarmTracker.name = "Farm Buddy"
-FarmTracker.version = "0.1"
 FarmTracker.sessionActive = false
 FarmTracker.startTime = 0
 FarmTracker.lootTable = {}
-
-local mainUI = CreateFrame("Frame")
-mainUI:RegisterEvent("LOOT_OPENED")
 
 local function QualityToStars(quality)
     if quality == 1 then return "★"
@@ -22,14 +17,12 @@ function FarmTracker:StartSession()
     self.sessionActive = true
     self.startTime = GetTime()
     self.lootTable = {}
-    print("Sessão de farm iniciada")
 end
 
 function FarmTracker:StopSession()
     if not self.sessionActive then return end
     self.sessionActive = false
     local elapsed = GetTime() - self.startTime
-    print("Sessão de farm encerrada. Tempo decorrido de: " .. math.floor(elapsed) .. " segundos")
 
     for item, count in pairs(self.lootTable) do
         print(item .. ": " .. count)
@@ -57,13 +50,3 @@ mainUI:SetScript("OnEvent", function(_, event)
         end
     end
 end)
-
-local eventFrame = CreateFrame("Frame")
-eventFrame:RegisterEvent("ADDON_LOADED")
-eventFrame:SetScript("OnEvent", function(self, event, addonName)
-    if addonName == ADDON_NAME then
-        print("|cff00ff00" .. FarmTracker.name .. " v" .. FarmTracker.version .. " carregado com sucesso!|r")
-        print("Digite |cffffff00/farmbuddy|r para abrir a interface.")
-    end
-end)
-

@@ -1,8 +1,13 @@
 ## Interface: 100207
-## Title: FarmBuddy
+## Title: Farm Buddy
 ## Notes: Rastreia coleta de itens durante sessões de farm
 ## Version: 0.1
 ## Author: Thallanar
-## SavedVariables: FarmTracker
-FarmBuddy.lua
-FarmBuddyUI.lua
+## SavedVariables: FarmBuddyDB
+## OptionalDeps: LibDataBroker-1.1, LibDBIcon-1.0
+
+core/Init.lua
+core/Tracker.lua
+core/Minimap.lua
+ui/MainFrame.lua
+icon/

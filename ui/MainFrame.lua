@@ -12,6 +12,30 @@ f.title:SetFontObject("GameFontHighlight")
 f.title:SetPoint("LEFT", f.TitleBg, "LEFT", 5, 0)
 f.title:SetText("Farm Buddy")
 
+FarmTracker.frame = f -- Referência global
+
+-- Tempo decorrido (FontString)
+local timerText = f:CreateFontString(nil, "OVERLAY", "GameFontNormalLarge")
+timerText:SetPoint("BOTTOM", f, "BOTTOM", 0, 10)
+timerText:SetText("Tempo: 00:00:00")
+
+local updateInterval = 0
+f:SetScript("OnUpdate", function(self, elapsed)
+    if FarmTracker.sessionActive then
+        updateInterval = updateInterval + elapsed
+        if updateInterval >= 1 then
+            local totalSeconds = math.floor(GetTime() - FarmTracker.startTime)
+            local hours = math.floor(totalSeconds / 3600)
+            local minutes = math.floor((totalSeconds % 3600) / 60)
+            local seconds = totalSeconds % 60
+            timerText:SetText(string.format("Tempo: %02d:%02d:%02d", hours, minutes, seconds))
+            updateInterval = 0
+        end
+    else
+        timerText:SetText("Tempo: 00:00:00")
+    end
+end)
+
 -- Interface do Botão de Start: 
 local startButton = CreateFrame("Button", nil, f, "GameMenuButtonTemplate")
 startButton:SetPoint("TOP", f, "TOP", 0, -40)
