@@ -9,5 +9,6 @@
 core/Init.lua
 core/Tracker.lua
 core/Minimap.lua
+ui/DisplayItem.lua
 ui/MainFrame.lua
 icon/

@@ -1,17 +1,10 @@
 local mainUI = CreateFrame("Frame")
 mainUI:RegisterEvent("LOOT_OPENED")
 
+FarmTracker = {}
 FarmTracker.sessionActive = false
 FarmTracker.startTime = 0
 FarmTracker.lootTable = {}
-
-local function QualityToStars(quality)
-    if quality == 1 then return "★"
-    elseif quality == 2 then return "★★"
-    elseif quality == 3 then return "★★★"
-    else return ""
-    end
-end
 
 function FarmTracker:StartSession()
     self.sessionActive = true
@@ -35,17 +28,25 @@ mainUI:SetScript("OnEvent", function(_, event)
         for i = 1, numLootItems do
             local itemLink = GetLootSlotLink(i)
             if itemLink then
-                local itemName = GetItemInfo(itemLink)
+                local itemName, _, itemQuality, _, _, _, _, _, _, iconTexture = GetItemInfo(itemLink)
                 local _, _, quantity = GetLootSlotInfo(i)
                 quantity = quantity or 1
 
-                local itemID = tonumber(string.match(itemLink, "item:(%d+):"))
-                local quality = select(3, GetItemInfo(itemLink))
-                local stars = QualityToStars(quality)
+                -- Usa o itemLink como chave para garantir separação por qualidade (ícone incluso)
+                FarmTracker.lootTable[itemLink] = FarmTracker.lootTable[itemLink] or {
+                    count = 0,
+                    icon = iconTexture or "",
+                    label = itemName or itemLink,
+                    link = itemLink
+                }
 
-                local key = itemName .. " [" .. stars .. "]"
+                FarmTracker.lootTable[itemLink].count = FarmTracker.lootTable[itemLink].count + quantity
 
-                FarmTracker.lootTable[key] = (FarmTracker.lootTable[key] or 0) + quantity
+                -- Atualiza a exibição
+                if DisplayItem and DisplayItem.UpdateDisplay then
+                    DisplayItem:UpdateDisplay(FarmTracker.lootTable)
+                    DisplayItem:UpdateDisplay(FarmTracker.lootTable)
+                end
             end
         end
     end

@@ -14,6 +14,16 @@ f.title:SetText("Farm Buddy")
 
 FarmTracker.frame = f -- Referência global
 
+local success, err = pcall(function()
+    if DisplayItem and DisplayItem.Init then
+        DisplayItem:Init(f)
+    end
+end)
+
+if not success then
+    print("Erro ao inicializar DisplayItem:", err)
+end
+
 -- Tempo decorrido (FontString)
 local timerText = f:CreateFontString(nil, "OVERLAY", "GameFontNormalLarge")
 timerText:SetPoint("BOTTOM", f, "BOTTOM", 0, 10)
@@ -55,7 +65,6 @@ stopButton:SetScript("OnClick", function()
 end)
 
 f:Hide()
-
 SLASH_FARMBUDDY1 = "/farmbuddy"
 SlashCmdList["FARMBUDDY"] = function()
     if f:IsShown() then
@@ -64,3 +73,5 @@ SlashCmdList["FARMBUDDY"] = function()
         f:Show()
     end
 end
+
+print("MainFrame carregado")
