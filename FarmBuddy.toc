@@ -11,4 +11,5 @@ core/Tracker.lua
 core/Minimap.lua
 ui/DisplayItem.lua
 ui/MainFrame.lua
+ui/Settings.lua
 icon/

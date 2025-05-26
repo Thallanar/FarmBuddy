@@ -24,6 +24,25 @@ if not success then
     print("Erro ao inicializar DisplayItem:", err)
 end
 
+-- Settings
+local settingsButton = CreateFrame("Button", nil, f)
+settingsButton:SetSize(24, 24)
+settingsButton:SetPoint("RIGHT", f.CloseButton, "LEFT", -4, 0)
+
+-- Fundo do botão (hover e clique suave, sem template complexo)
+settingsButton:SetNormalTexture("Interface\\Buttons\\UI-Quickslot2")
+settingsButton:SetPushedTexture("Interface\\Buttons\\UI-Quickslot-Depress")
+settingsButton:SetHighlightTexture("Interface\\Buttons\\ButtonHilight-Square", "ADD")
+
+local gearIcon = settingsButton:CreateTexture(nil, "ARTWORK")
+gearIcon:SetTexture("Interface\\AddOns\\FarmBuddy\\Media\\gear.tga") -- ou outro ícone
+gearIcon:SetAllPoints()
+gearIcon:SetTexCoord(0.1, 0.9, 0.1, 0.9)
+
+settingsButton:SetScript("OnClick", function()
+    TrackerSettings:Toggle()
+end)
+
 -- Tempo decorrido (FontString)
 local timerText = f:CreateFontString(nil, "OVERLAY", "GameFontNormalLarge")
 timerText:SetPoint("BOTTOM", f, "BOTTOM", 0, 10)

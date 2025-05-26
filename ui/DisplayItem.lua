@@ -90,48 +90,51 @@ function DisplayItem:UpdateDisplay(lootTable)
     local yOffset = 0
 
     for _, category in ipairs(sortedCategories) do
-        local items = categorized[category]
+        local showCategory = not FarmBuddyDB.EnabledCategories or FarmBuddyDB.EnabledCategories[category] ~= false
+        if showCategory then
+            local items = categorized[category]
 
-        -- Título da categoria
-        local titleFrame = CreateFrame("Frame", nil, contentFrame)
-        titleFrame:SetSize(200, 20)
-        titleFrame:SetPoint("TOPLEFT", contentFrame, "TOPLEFT", 0, -yOffset)
+            -- Título da categoria
+            local titleFrame = CreateFrame("Frame", nil, contentFrame)
+            titleFrame:SetSize(200, 20)
+            titleFrame:SetPoint("TOPLEFT", contentFrame, "TOPLEFT", 0, -yOffset)
 
-        local titleText = titleFrame:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
-        titleText:SetPoint("LEFT", titleFrame, "LEFT", 0, 0)
-        titleText:SetText("|cffffff00" .. category .. "|r")
+            local titleText = titleFrame:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
+            titleText:SetPoint("LEFT", titleFrame, "LEFT", 0, 0)
+            titleText:SetText("|cffffff00" .. category .. "|r")
 
-        table.insert(itemFrames, titleFrame)
-        yOffset = yOffset + 22
+            table.insert(itemFrames, titleFrame)
+            yOffset = yOffset + 22
 
-        for _, data in ipairs(items) do
-            local frame = CreateFrame("Frame", nil, contentFrame)
-            frame:SetSize(200, 24)
-            frame:SetPoint("TOPLEFT", contentFrame, "TOPLEFT", 0, -yOffset)
+            for _, data in ipairs(items) do
+                local frame = CreateFrame("Frame", nil, contentFrame)
+                frame:SetSize(200, 24)
+                frame:SetPoint("TOPLEFT", contentFrame, "TOPLEFT", 0, -yOffset)
 
-            -- Ícone
-            local icon = frame:CreateTexture(nil, "ARTWORK")
-            icon:SetSize(20, 20)
-            icon:SetPoint("LEFT", frame, "LEFT", 0, 0)
-            icon:SetTexture(data.icon or "")
+                -- Ícone
+                local icon = frame:CreateTexture(nil, "ARTWORK")
+                icon:SetSize(20, 20)
+                icon:SetPoint("LEFT", frame, "LEFT", 0, 0)
+                icon:SetTexture(data.icon or "")
 
-            -- Tooltip
-            frame:SetScript("OnEnter", function()
-                GameTooltip:SetOwner(frame, "ANCHOR_RIGHT")
-                GameTooltip:SetHyperlink(data.link)
-                GameTooltip:Show()
-            end)
-            frame:SetScript("OnLeave", function()
-                GameTooltip:Hide()
-            end)
+                -- Tooltip
+                frame:SetScript("OnEnter", function()
+                    GameTooltip:SetOwner(frame, "ANCHOR_RIGHT")
+                    GameTooltip:SetHyperlink(data.link)
+                    GameTooltip:Show()
+                end)
+                frame:SetScript("OnLeave", function()
+                    GameTooltip:Hide()
+                end)
 
-            -- Nome formatado com qualidade (link)
-            local text = frame:CreateFontString(nil, "OVERLAY", "GameFontNormal")
-            text:SetPoint("LEFT", icon, "RIGHT", 6, 0)
-            text:SetText(data.link .. " x" .. data.count)
+                -- Nome formatado com qualidade (link)
+                local text = frame:CreateFontString(nil, "OVERLAY", "GameFontNormal")
+                text:SetPoint("LEFT", icon, "RIGHT", 6, 0)
+                text:SetText(data.link .. " x" .. data.count)
 
-            table.insert(itemFrames, frame)
-            yOffset = yOffset + 26
+                table.insert(itemFrames, frame)
+                yOffset = yOffset + 26
+            end
         end
     end
 
