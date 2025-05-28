@@ -28,16 +28,13 @@ end
 local settingsButton = CreateFrame("Button", nil, f)
 settingsButton:SetSize(24, 24)
 settingsButton:SetPoint("RIGHT", f.CloseButton, "LEFT", -4, 0)
+settingsButton:SetHighlightTexture("Interface\\Buttons\\UI-Common-MouseHilight",
 
--- Fundo do botão (hover e clique suave, sem template complexo)
-settingsButton:SetNormalTexture("Interface\\Buttons\\UI-Quickslot2")
-settingsButton:SetPushedTexture("Interface\\Buttons\\UI-Quickslot-Depress")
-settingsButton:SetHighlightTexture("Interface\\Buttons\\ButtonHilight-Square", "ADD")
-
-local gearIcon = settingsButton:CreateTexture(nil, "ARTWORK")
-gearIcon:SetTexture("Interface\\AddOns\\FarmBuddy\\Media\\gear.tga") -- ou outro ícone
-gearIcon:SetAllPoints()
-gearIcon:SetTexCoord(0.1, 0.9, 0.1, 0.9)
+-- Adiciona o ícone da engrenagem por cima da textura padrão do botão
+local icon = settingsButton:CreateTexture(nil, "OVERLAY")
+icon:SetTexture("Interface\\AddOns\\FarmBuddy\\icon\\gear.png")
+icon:SetSize(16, 16)
+icon:SetPoint("CENTER", settingsButton, "CENTER", 0, 0)
 
 settingsButton:SetScript("OnClick", function()
     TrackerSettings:Toggle()
