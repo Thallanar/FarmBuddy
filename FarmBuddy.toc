@@ -1,5 +1,5 @@
 ## Interface: 100207
-## Title: Farm Buddy
+## Title: FarmBuddy
 ## Notes: Rastreia coleta de itens durante sessões de farm
 ## Version: 0.1
 ## Author: Thallanar
@@ -10,6 +10,6 @@ core/Init.lua
 core/Tracker.lua
 core/Minimap.lua
 ui/DisplayItem.lua
+core/Settings.lua
+ui/SettingsFrame.lua
 ui/MainFrame.lua
-ui/Settings.lua
-icon/

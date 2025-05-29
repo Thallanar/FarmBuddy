@@ -1,16 +1,27 @@
-local f = CreateFrame("Frame", "FarmTrackerFrame", UIParent, "BasicFrameTemplateWithInset")
-f:SetSize(200, 120)
+local f = CreateFrame("Frame", "FarmTrackerFrame", UIParent, BackdropTemplateMixin and "BackdropTemplate")
+f:SetSize(240, 160)
 f:SetPoint("CENTER")
+f:SetBackdrop({
+    bgFile = "Interface\\DialogFrame\\UI-DialogBox-Background",
+    edgeFile = "Interface\\DialogFrame\\UI-DialogBox-Border",
+    tile = true, tileSize = 32, edgeSize = 32,
+    insets = { left = 11, right = 12, top = 12, bottom = 11 }
+})
 f:SetMovable(true)
 f:EnableMouse(true)
 f:RegisterForDrag("LeftButton")
 f:SetScript("OnDragStart", f.StartMoving)
 f:SetScript("OnDragStop", f.StopMovingOrSizing)
 
-f.title = f:CreateFontString(nil, "OVERLAY")
-f.title:SetFontObject("GameFontHighlight")
-f.title:SetPoint("LEFT", f.TitleBg, "LEFT", 5, 0)
-f.title:SetText("Farm Buddy")
+-- TítleBar
+local titleBar = CreateFrame("Frame", nil, f)
+titleBar:SetSize(f:GetWidth(), 24)
+titleBar:SetPoint("TOP", f, "TOP", 0, -6)
+
+-- Title
+local titleText = titleBar:CreateFontString(nil, "OVERLAY", "GameFontNormal")
+titleText:SetText("Farm Buddy")
+titleText:SetPoint("LEFT", 15, 0)
 
 FarmTracker.frame = f -- Referência global
 
@@ -24,21 +35,35 @@ if not success then
     print("Erro ao inicializar DisplayItem:", err)
 end
 
--- Settings
-local settingsButton = CreateFrame("Button", nil, f)
-settingsButton:SetSize(24, 24)
-settingsButton:SetPoint("RIGHT", f.CloseButton, "LEFT", -4, 0)
-settingsButton:SetHighlightTexture("Interface\\Buttons\\UI-Common-MouseHilight",
+--Close Button
+local closeButton = CreateFrame("Button", nil, titleBar)
+closeButton:SetSize(24, 24)
+closeButton:SetPoint("RIGHT", -8, 0)
+closeButton:SetHighlightTexture("Interface\\Buttons\\UI-Common-MouseHilight")
 
--- Adiciona o ícone da engrenagem por cima da textura padrão do botão
-local icon = settingsButton:CreateTexture(nil, "OVERLAY")
-icon:SetTexture("Interface\\AddOns\\FarmBuddy\\icon\\gear.png")
-icon:SetSize(16, 16)
-icon:SetPoint("CENTER", settingsButton, "CENTER", 0, 0)
+local closeIcon = closeButton:CreateTexture(nil, "ARTWORK")
+closeIcon:SetAllPoints()
+closeIcon:SetTexture("Interface\\AddOns\\FarmBuddy\\icon\\close.png")  -- Ícone de "X" visual
 
-settingsButton:SetScript("OnClick", function()
-    TrackerSettings:Toggle()
+closeButton:SetScript("OnClick", function() 
+    f:Hide() 
 end)
+
+-- Settings Button
+local settingsButton = CreateFrame("Button", nil, titleBar)
+settingsButton:SetSize(22, 22)
+settingsButton:SetPoint("RIGHT", closeButton, "LEFT", 1, 0)
+settingsButton:SetHighlightTexture("Interface\\Buttons\\UI-Common-MouseHilight")
+
+local settingsIcon = settingsButton:CreateTexture(nil, "ARTWORK")
+settingsIcon:SetPoint("CENTER", settingsButton, "CENTER", 0, 0)
+settingsIcon:SetSize(18, 18)
+settingsIcon:SetTexture("Interface\\AddOns\\FarmBuddy\\icon\\gear.png")
+
+settingsButton:SetScript("OnClick", function() 
+    TrackerSettings:Toggle() 
+end)
+
 
 -- Tempo decorrido (FontString)
 local timerText = f:CreateFontString(nil, "OVERLAY", "GameFontNormalLarge")
@@ -64,7 +89,7 @@ end)
 
 -- Interface do Botão de Start: 
 local startButton = CreateFrame("Button", nil, f, "GameMenuButtonTemplate")
-startButton:SetPoint("TOP", f, "TOP", 0, -40)
+startButton:SetPoint("CENTER", f, "CENTER")
 startButton:SetSize(120, 20)
 startButton:SetText("Iniciar")
 startButton:SetScript("OnClick", function()
@@ -89,5 +114,3 @@ SlashCmdList["FARMBUDDY"] = function()
         f:Show()
     end
 end
-
-print("MainFrame carregado")
