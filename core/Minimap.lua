@@ -1,3 +1,5 @@
+local FarmBuddyDB = FarmBuddyDB or {}
+
 local LDB = LibStub("LibDataBroker-1.1"):NewDataObject("Farm Buddy", 
 {
     type = "data source",
@@ -17,5 +19,4 @@ local LDB = LibStub("LibDataBroker-1.1"):NewDataObject("Farm Buddy",
 })
 
 local icon = LibStub("LibDBIcon-1.0")
-FarmBuddyDB = FarmBuddyDB or {}
 icon:Register("Farm Buddy", LDB, FarmBuddyDB)

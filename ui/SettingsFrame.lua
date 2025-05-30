@@ -1,4 +1,3 @@
-
 local settingsFrame = CreateFrame("Frame", "SettingsFrame", UIParent, BackdropTemplateMixin and "BackdropTemplate")
 settingsFrame:SetSize(300, 400)
 settingsFrame:SetPoint("CENTER")
@@ -37,24 +36,31 @@ closeButton:SetScript("OnClick", function()
     settingsFrame:Hide() 
 end)
 
+-- ScrollFrame para as categorias
+local scrollFrame = CreateFrame("ScrollFrame", nil, settingsFrame, "UIPanelScrollFrameTemplate")
+scrollFrame:SetPoint("TOPLEFT", 10, -40)
+scrollFrame:SetPoint("BOTTOMRIGHT", -30, 10)
+
+local scrollChild = CreateFrame("Frame", nil, scrollFrame)
+scrollChild:SetSize(240, 10000) -- será ajustado conforme necessário
+scrollFrame:SetScrollChild(scrollChild)
+
+TrackerSettings.scrollChild = scrollChild
 TrackerSettings.frame = settingsFrame
+print("Abrindo painel de filtros...")
+print("FarmTracker.CategoriesList:", FarmTracker.CategoriesList and #FarmTracker.CategoriesList or "nil")
 
 function TrackerSettings:Toggle()
-    -- if not settingsFrame then self:Init() end
     if settingsFrame:IsShown() then
-        settingsFrame:Hide()
+        self.frame:Hide()
     else
-        -- self:BuildCheckboxes(FarmTracker.CategoriesList or {})
-        settingsFrame:Show()
+        self:BuildCheckboxes(FarmTracker.CategoriesList or {})
+        self.frame:Show()
     end
 end
 
 settingsFrame:Hide()
 SLASH_FBSETTINGS1 = "/fbstts"
 SlashCmdList["FBSETTINGS"] = function()
-    if settingsFrame:IsShown() then
-        settingsFrame:Hide()
-    else
-        settingsFrame:Show()
-    end
+    TrackerSettings:Toggle()
 end

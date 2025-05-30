@@ -1,4 +1,4 @@
-DisplayItem = {}
+DisplayItem = DisplayItem or {}
 local displayFrame
 local scrollFrame
 local contentFrame
@@ -90,7 +90,7 @@ function DisplayItem:UpdateDisplay(lootTable)
     local yOffset = 0
 
     for _, category in ipairs(sortedCategories) do
-        local showCategory = not FarmBuddyDB.EnabledCategories or FarmBuddyDB.EnabledCategories[category] ~= false
+        local showCategory = not FarmBuddyDB.categoryFilters or FarmBuddyDB.categoryFilters[category] ~= false
         if showCategory then
             local items = categorized[category]
 

@@ -1,7 +1,9 @@
 local mainUI = CreateFrame("Frame")
 mainUI:RegisterEvent("LOOT_OPENED")
 
-FarmTracker = {}
+FarmTracker = FarmTracker or {}
+FarmTracker.name = "FarmBuddy"
+FarmTracker.version = "0.1"
 FarmTracker.sessionActive = false
 FarmTracker.startTime = 0
 FarmTracker.lootTable = {}
