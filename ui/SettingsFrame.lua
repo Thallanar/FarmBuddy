@@ -48,13 +48,13 @@ scrollFrame:SetScrollChild(scrollChild)
 TrackerSettings.scrollChild = scrollChild
 TrackerSettings.frame = settingsFrame
 print("Abrindo painel de filtros...")
-print("FarmTracker.CategoriesList:", FarmTracker.CategoriesList and #FarmTracker.CategoriesList or "nil")
+print("FarmTracker.categoryList:", FarmTracker.categoryList and #FarmTracker.categoryList or "nil")
 
 function TrackerSettings:Toggle()
     if settingsFrame:IsShown() then
         self.frame:Hide()
     else
-        self:BuildCheckboxes(FarmTracker.CategoriesList or {})
+        self:BuildCheckboxes(FarmTracker.categoryList or {})
         self.frame:Show()
     end
 end

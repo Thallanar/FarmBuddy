@@ -4,6 +4,7 @@ local scrollFrame
 local contentFrame
 local toggleButton
 local itemFrames = {}
+local itemLoadScheduled = {}
 local isVisible = true
 
 local FRAME_WIDTH = 240
@@ -59,12 +60,6 @@ function DisplayItem:Init(parent)
     end)
 end
 
--- Agrupa os itens por tipo (ex: "Minério", "Couro", etc.)
-local function CategorizeItem(link)
-    local _, _, _, _, _, itemType, itemSubType = GetItemInfo(link)
-    return itemSubType or itemType or "Outros"
-end
-
 function DisplayItem:UpdateDisplay(lootTable)
     -- Limpa a exibição anterior
     for _, frame in ipairs(itemFrames) do
@@ -74,8 +69,8 @@ function DisplayItem:UpdateDisplay(lootTable)
 
     -- Organiza os itens por categoria
     local categorized = {}
-    for link, data in pairs(lootTable) do
-        local category = CategorizeItem(data.link)
+    for itemID, data in pairs(lootTable) do
+        local category = data.category or "Outros"
         categorized[category] = categorized[category] or {}
         table.insert(categorized[category], data)
     end
@@ -90,7 +85,13 @@ function DisplayItem:UpdateDisplay(lootTable)
     local yOffset = 0
 
     for _, category in ipairs(sortedCategories) do
-        local showCategory = not FarmBuddyDB.categoryFilters or FarmBuddyDB.categoryFilters[category] ~= false
+        local sampleItem = categorized[category][1]
+        local group = sampleItem.group or "Outros"
+        local key = group .. "::" .. category
+        local showCategory = FarmBuddyDB.categoryFilters[key] ~= false
+        
+        print(">> Verificando filtro:", key, "->", FarmBuddyDB.categoryFilters[key])
+
         if showCategory then
             local items = categorized[category]
 

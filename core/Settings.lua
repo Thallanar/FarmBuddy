@@ -1,12 +1,18 @@
 TrackerSettings = TrackerSettings or {}
 local expandedSections = {}
 local checkboxes = {}
+local headers = {}
 
 function TrackerSettings:BuildCheckboxes(categories)
     for _, cb in pairs(checkboxes) do 
             cb:Hide() 
     end
     wipe(checkboxes)
+
+    for _, h in pairs(headers) do
+        h:Hide()
+    end
+    wipe(headers)
 
     local yOffset = -10
 
@@ -23,7 +29,13 @@ function TrackerSettings:BuildCheckboxes(categories)
         header:SetScript("OnClick", function()
             expandedSections[sectionName] = not expandedSections[sectionName]
             self:BuildCheckboxes(categories)
+
+            if DisplayItem and DisplayItem.UpdateDisplay then
+                DisplayItem:UpdateDisplay(FarmTracker.lootTable)
+            end
         end)
+
+        table.insert(headers, header)
 
         yOffset = yOffset - 25
 
@@ -32,19 +44,25 @@ function TrackerSettings:BuildCheckboxes(categories)
                 local cb = CreateFrame("CheckButton", nil, self.scrollChild, "ChatConfigCheckButtonTemplate")
                 cb:SetPoint("TOPLEFT", 30, yOffset)
                 cb.Text:SetText(category)
-                cb:SetChecked(FarmBuddyDB.categoryFilters[category] ~= false)
+
+                local key = sectionName .. "::" .. category
+                local isChecked = FarmBuddyDB.categoryFilters[key] ~= false
+                cb:SetChecked(isChecked)
+
                 cb:SetScript("OnClick", function(self)
-                    FarmBuddyDB.categoryFilters[category] = self:GetChecked()
+                    FarmBuddyDB.categoryFilters[key] = self:GetChecked()
                     if DisplayItem and DisplayItem.UpdateDisplay then
                         DisplayItem:UpdateDisplay(FarmTracker.lootTable)
                     end
                 end)
+
                 table.insert(checkboxes, cb)
                 yOffset = yOffset - 30
             end
+            
             yOffset = yOffset - 10
         end
     end
 
-    self.scrollChild:SetHeight(-yOffset + 10)
+    self.scrollChild:SetHeight(math.abs(yOffset) + 20)
 end

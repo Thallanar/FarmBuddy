@@ -1,3 +1,5 @@
+FarmBuddyDB = FarmBuddyDB or {}
+
 local groupedCategories = {
     ["Armor"] = {"Miscellaneous","Cloth","Leather","Mail","Plate","Shields","Librams","Idols","Totems","Sigils"},
     ["Consumables"] = {"Food & Drink","Potion","Elixir","Flask","Bandage","Item Enhancement","Scroll","Other","Consumable"},
@@ -19,15 +21,35 @@ local groupedCategories = {
 
 FarmTracker = FarmTracker or {}
 
-FarmTracker.CategoriesList = groupedCategories
+FarmTracker.categoryList = groupedCategories
 
 TrackerSettings = TrackerSettings or {}
 
 local count = 0
-for _ in pairs(FarmTracker.CategoriesList) do
+for _ in pairs(FarmTracker.categoryList) do
     count = count + 1
 end
-print("FarmTracker.CategoriesList tem", count, "grupos de categorias")
+
+print("FarmTracker.categoryList configurado com", tostring(FarmTracker.categoryList and "sucesso" or "falha"))
+print("FarmTracker.categoryList tem", count, "grupos de categorias")
+
+function FarmTracker:GetCategoryGroup(subType)
+    if not self.categoryList then 
+        return nil 
+    end
+    print(">>> GetCategoryGroup chamado com subType:", subType)
+
+    for sectionName, categories in pairs(self.categoryList) do
+        for _, cat in ipairs(categories) do
+            if cat == subType then
+                return sectionName
+            end
+        end
+    end
+    print(">>> Categoria encontrada:", subType, "->", sectionName)
+    return nil
+end
+
 
 -- Mensagem de carregamento
 local eventFrame = CreateFrame("Frame")
@@ -36,21 +58,20 @@ eventFrame:SetScript("OnEvent", function(self, event, addonName)
     if addonName == "FarmBuddy" then
         print("|cff00ff00", addonName)
         
-        FarmBuddyDB = FarmBuddyDB or {}
         FarmBuddyDB.categoryFilters = FarmBuddyDB.categoryFilters or {}
 
-        if not FarmBuddyDB.categoryFilters then
-            FarmBuddyDB.categoryFilters = {}
-            -- marca todas as categorias como ativas por padrão
-            for _, categoryList in pairs(groupedCategories) do
-                for _, category in ipairs(categoryList) do
-                    FarmBuddyDB.categoryFilters[category] = true
+        -- Inicializa filtros padrão se não existirem
+        for sectionName, categoryList in pairs(FarmTracker.categoryList) do
+            for _, category in ipairs(categoryList) do
+                local key = sectionName .. "::" .. category
+                if FarmBuddyDB.categoryFilters[key] == nil then
+                    FarmBuddyDB.categoryFilters[key] = true
                 end
             end
         end
 
         if TrackerSettings and TrackerSettings.frame then
-            TrackerSettings:BuildCheckboxes(FarmTracker.CategoriesList or {})
+            TrackerSettings:BuildCheckboxes(FarmTracker.categoryList or {})
         end
 
         self:UnregisterEvent("ADDON_LOADED")

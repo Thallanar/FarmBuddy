@@ -6,7 +6,7 @@ FarmTracker.name = "FarmBuddy"
 FarmTracker.version = "0.1"
 FarmTracker.sessionActive = false
 FarmTracker.startTime = 0
-FarmTracker.lootTable = {}
+FarmTracker.lootTable = FarmTracker.lootTable or {}
 
 function FarmTracker:StartSession()
     self.sessionActive = true
@@ -30,19 +30,22 @@ mainUI:SetScript("OnEvent", function(_, event)
         for i = 1, numLootItems do
             local itemLink = GetLootSlotLink(i)
             if itemLink then
-                local itemName, _, itemQuality, _, _, _, _, _, _, iconTexture = GetItemInfo(itemLink)
+                local itemName, _, itemQuality, _, _, itemType, itemSubType, _, _, iconTexture = GetItemInfo(itemLink)
                 local _, _, quantity = GetLootSlotInfo(i)
                 quantity = quantity or 1
 
-                -- Usa o itemLink como chave para garantir separação por qualidade (ícone incluso)
-                FarmTracker.lootTable[itemLink] = FarmTracker.lootTable[itemLink] or {
+                local itemID = GetItemInfoInstant(itemLink)
+                local categoryGroup = FarmTracker:GetCategoryGroup(itemSubType)
+                FarmTracker.lootTable[itemID] = FarmTracker.lootTable[itemID] or {
                     count = 0,
                     icon = iconTexture or "",
                     label = itemName or itemLink,
-                    link = itemLink
+                    link = itemLink,
+                    group = categoryGroup,
+                    category = itemSubType,
                 }
 
-                FarmTracker.lootTable[itemLink].count = FarmTracker.lootTable[itemLink].count + quantity
+                FarmTracker.lootTable[itemID].count = FarmTracker.lootTable[itemID].count + quantity
 
                 -- Atualiza a exibição
                 if DisplayItem and DisplayItem.UpdateDisplay then
