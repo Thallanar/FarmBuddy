@@ -18,10 +18,6 @@ function FarmTracker:StopSession()
     if not self.sessionActive then return end
     self.sessionActive = false
     local elapsed = GetTime() - self.startTime
-
-    for item, count in pairs(self.lootTable) do
-        print(item .. ": " .. count)
-    end
 end
 
 mainUI:SetScript("OnEvent", function(_, event) 

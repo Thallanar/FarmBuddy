@@ -47,8 +47,6 @@ scrollFrame:SetScrollChild(scrollChild)
 
 TrackerSettings.scrollChild = scrollChild
 TrackerSettings.frame = settingsFrame
-print("Abrindo painel de filtros...")
-print("FarmTracker.categoryList:", FarmTracker.categoryList and #FarmTracker.categoryList or "nil")
 
 function TrackerSettings:Toggle()
     if settingsFrame:IsShown() then

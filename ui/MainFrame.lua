@@ -31,10 +31,6 @@ local success, err = pcall(function()
     end
 end)
 
-if not success then
-    print("Erro ao inicializar DisplayItem:", err)
-end
-
 --Close Button
 local closeButton = CreateFrame("Button", nil, titleBar)
 closeButton:SetSize(24, 24)

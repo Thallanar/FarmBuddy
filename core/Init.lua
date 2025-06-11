@@ -30,15 +30,10 @@ for _ in pairs(FarmTracker.categoryList) do
     count = count + 1
 end
 
-print("FarmTracker.categoryList configurado com", tostring(FarmTracker.categoryList and "sucesso" or "falha"))
-print("FarmTracker.categoryList tem", count, "grupos de categorias")
-
 function FarmTracker:GetCategoryGroup(subType)
     if not self.categoryList then 
         return nil 
     end
-    print(">>> GetCategoryGroup chamado com subType:", subType)
-
     for sectionName, categories in pairs(self.categoryList) do
         for _, cat in ipairs(categories) do
             if cat == subType then
@@ -46,7 +41,6 @@ function FarmTracker:GetCategoryGroup(subType)
             end
         end
     end
-    print(">>> Categoria encontrada:", subType, "->", sectionName)
     return nil
 end
 

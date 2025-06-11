@@ -89,8 +89,6 @@ function DisplayItem:UpdateDisplay(lootTable)
         local group = sampleItem.group or "Outros"
         local key = group .. "::" .. category
         local showCategory = FarmBuddyDB.categoryFilters[key] ~= false
-        
-        print(">> Verificando filtro:", key, "->", FarmBuddyDB.categoryFilters[key])
 
         if showCategory then
             local items = categorized[category]
