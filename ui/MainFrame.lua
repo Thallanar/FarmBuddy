@@ -60,10 +60,42 @@ settingsButton:SetScript("OnClick", function()
     TrackerSettings:Toggle() 
 end)
 
+-- Interface do Botão de Pause:
+local pauseButton = CreateFrame("Button", nil, f, "GameMenuButtonTemplate")
+pauseButton:SetPoint("CENTER", f)
+pauseButton:SetSize(120, 20)
+pauseButton:SetText("Pausar")
+pauseButton:SetScript("OnClick", function()
+    if FarmTracker:isPaused() then
+        FarmTracker:Resume()
+        pauseButton:SetText("Pausar")
+    else
+        FarmTracker:Pause()
+        pauseButton:SetText("Retomar")
+    end
+end)
+
+-- Interface do Botão de Start: 
+local startButton = CreateFrame("Button", nil, f, "GameMenuButtonTemplate")
+startButton:SetPoint("BOTTOM", pauseButton, "TOP", 0, 5)
+startButton:SetSize(120, 20)
+startButton:SetText("Iniciar")
+startButton:SetScript("OnClick", function()
+    FarmTracker:StartSession()
+end)
+
+-- Interface do Botão de Stop:
+local stopButton = CreateFrame("Button", nil, f, "GameMenuButtonTemplate")
+stopButton:SetPoint("TOP", pauseButton, "BOTTOM", 0, -5)
+stopButton:SetSize(120, 20)
+stopButton:SetText("Parar")
+stopButton:SetScript("OnClick", function()
+    FarmTracker:StopSession()
+end)
 
 -- Tempo decorrido (FontString)
 local timerText = f:CreateFontString(nil, "OVERLAY", "GameFontNormalLarge")
-timerText:SetPoint("BOTTOM", f, "BOTTOM", 0, 10)
+timerText:SetPoint("TOP", stopButton, "BOTTOM", 0, -10)
 timerText:SetText("Tempo: 00:00:00")
 
 local updateInterval = 0
@@ -71,7 +103,7 @@ f:SetScript("OnUpdate", function(self, elapsed)
     if FarmTracker.sessionActive then
         updateInterval = updateInterval + elapsed
         if updateInterval >= 1 then
-            local totalSeconds = math.floor(GetTime() - FarmTracker.startTime)
+            local totalSeconds = math.floor(FarmTracker:GetElapsedTime())
             local hours = math.floor(totalSeconds / 3600)
             local minutes = math.floor((totalSeconds % 3600) / 60)
             local seconds = totalSeconds % 60
@@ -81,24 +113,6 @@ f:SetScript("OnUpdate", function(self, elapsed)
     else
         timerText:SetText("Tempo: 00:00:00")
     end
-end)
-
--- Interface do Botão de Start: 
-local startButton = CreateFrame("Button", nil, f, "GameMenuButtonTemplate")
-startButton:SetPoint("CENTER", f, "CENTER")
-startButton:SetSize(120, 20)
-startButton:SetText("Iniciar")
-startButton:SetScript("OnClick", function()
-    FarmTracker:StartSession()
-end)
-
--- Interface do Botão de Stop:
-local stopButton = CreateFrame("Button", nil, f, "GameMenuButtonTemplate")
-stopButton:SetPoint("TOP", startButton, "BOTTOM", 0, -10)
-stopButton:SetSize(120, 20)
-stopButton:SetText("Parar")
-stopButton:SetScript("OnClick", function()
-    FarmTracker:StopSession()
 end)
 
 f:Hide()

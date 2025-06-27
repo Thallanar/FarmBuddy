@@ -12,7 +12,7 @@ settingsFrame:EnableMouse(true)
 settingsFrame:RegisterForDrag("LeftButton")
 settingsFrame:SetScript("OnDragStart", settingsFrame.StartMoving)
 settingsFrame:SetScript("OnDragStop", settingsFrame.StopMovingOrSizing)
-
+settingsFrame:Hide()
 
 -- TítleBar
 local titleBar = CreateFrame("Frame", nil, settingsFrame)
@@ -55,10 +55,4 @@ function TrackerSettings:Toggle()
         self:BuildCheckboxes(FarmTracker.categoryList or {})
         self.frame:Show()
     end
-end
-
-settingsFrame:Hide()
-SLASH_FBSETTINGS1 = "/fbstts"
-SlashCmdList["FBSETTINGS"] = function()
-    TrackerSettings:Toggle()
 end

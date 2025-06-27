@@ -5,23 +5,67 @@ FarmTracker = FarmTracker or {}
 FarmTracker.name = "FarmBuddy"
 FarmTracker.version = "0.1"
 FarmTracker.sessionActive = false
+FarmTracker.paused = false
 FarmTracker.startTime = 0
+FarmTracker.pauseStartTime = 0
+FarmTracker.totalPausedTime = 0
 FarmTracker.lootTable = FarmTracker.lootTable or {}
 
 function FarmTracker:StartSession()
     self.sessionActive = true
+    self.paused = false
     self.startTime = GetTime()
+    self.totalPausedTime = 0
     self.lootTable = {}
 end
 
 function FarmTracker:StopSession()
     if not self.sessionActive then return end
     self.sessionActive = false
-    local elapsed = GetTime() - self.startTime
+end
+
+function FarmTracker:GetElapsedTime()
+    if not self.sessionActive then
+        return 0
+    end
+
+    local now = GetTime()
+    if self.paused then
+        return (self.pauseStartTime - self.startTime) - self.totalPausedTime
+    else
+        return (now - self.startTime) - self.totalPausedTime
+    end
+end
+
+function FarmTracker:Pause()
+    if not self.sessionActive or self.paused then
+        return
+    end
+
+    self.paused = true
+    self.pauseStartTime = GetTime()
+end
+
+function FarmTracker:Resume()
+    if not self.sessionActive or not self.paused then 
+        return 
+    end
+
+    local now = GetTime()
+    self.totalPausedTime = self.totalPausedTime + (now - self.pauseStartTime)
+    self.paused = false
+end
+
+function FarmTracker:isPaused()
+    return self.paused    
+end
+
+local function IsFarmPaused()
+    return FarmTracker.IsPaused and FarmTracker:IsPaused()
 end
 
 mainUI:SetScript("OnEvent", function(_, event) 
-    if event == "LOOT_OPENED" and FarmTracker.sessionActive then
+    if event == "LOOT_OPENED" and FarmTracker.sessionActive and not IsFarmPaused() then
         local numLootItems = GetNumLootItems()
         for i = 1, numLootItems do
             local itemLink = GetLootSlotLink(i)
