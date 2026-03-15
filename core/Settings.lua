@@ -16,6 +16,37 @@ function TrackerSettings:BuildCheckboxes(categories)
 
     local yOffset = -10
 
+    local selectAllCB = CreateFrame("CheckButton", nil, self.scrollChild, "ChatConfigCheckButtonTemplate")
+    selectAllCB:SetPoint("TOPLEFT", 10, -10)
+    selectAllCB.Text:SetText("Marcar todos")
+
+    local selecting = false -- flag para evitar loop de atualização
+
+    selectAllCB:SetScript("OnClick", function(self)
+        if selecting then return end
+        selecting = true
+        local check = self:GetChecked()
+
+        for sectionName, categoryList in pairs(categories) do
+            for _, category in ipairs(categoryList) do
+                local key = sectionName .. "::" .. category
+                FarmTracker:GetProfile().categoryFilters[key] = check
+            end
+        end
+
+        -- Atualiza os checkboxes abaixo
+        TrackerSettings:BuildCheckboxes(categories)
+
+        -- Atualiza a exibição se necessário
+        if DisplayItem and DisplayItem.UpdateDisplay then
+            DisplayItem:UpdateDisplay(FarmTracker.lootTable)
+        end
+
+        selecting = false
+    end)
+
+    yOffset = -40 -- para dar espaço antes dos headers
+
     for sectionName, categoryList in pairs(categories) do
         -- Botão de seção (cabeçalho)
         local header = CreateFrame("Button", nil, self.scrollChild)
@@ -46,11 +77,11 @@ function TrackerSettings:BuildCheckboxes(categories)
                 cb.Text:SetText(category)
 
                 local key = sectionName .. "::" .. category
-                local isChecked = FarmBuddyDB.categoryFilters[key] ~= false
+                local isChecked = FarmTracker:GetProfile().categoryFilters[key] ~= false
                 cb:SetChecked(isChecked)
 
                 cb:SetScript("OnClick", function(self)
-                    FarmBuddyDB.categoryFilters[key] = self:GetChecked()
+                    FarmTracker:GetProfile().categoryFilters[key] = self:GetChecked()
                     if DisplayItem and DisplayItem.UpdateDisplay then
                         DisplayItem:UpdateDisplay(FarmTracker.lootTable)
                     end

@@ -25,14 +25,25 @@ FarmTracker.categoryList = groupedCategories
 
 TrackerSettings = TrackerSettings or {}
 
-local count = 0
-for _ in pairs(FarmTracker.categoryList) do
-    count = count + 1
+function FarmTracker:GetProfileKey()
+    return UnitName("player") .. "-" .. GetRealmName()
+end
+
+function FarmTracker:GetProfile()
+    local key = self:GetProfileKey()
+    FarmBuddyDB.profiles = FarmBuddyDB.profiles or {}
+    if not FarmBuddyDB.profiles[key] then
+        FarmBuddyDB.profiles[key] = {
+            categoryFilters = {},
+            sessionHistory = {},
+        }
+    end
+    return FarmBuddyDB.profiles[key]
 end
 
 function FarmTracker:GetCategoryGroup(subType)
-    if not self.categoryList then 
-        return nil 
+    if not self.categoryList then
+        return nil
     end
     for sectionName, categories in pairs(self.categoryList) do
         for _, cat in ipairs(categories) do
@@ -51,15 +62,25 @@ eventFrame:RegisterEvent("ADDON_LOADED")
 eventFrame:SetScript("OnEvent", function(self, event, addonName)
     if addonName == "FarmBuddy" then
         print("|cff00ff00", addonName)
-        
-        FarmBuddyDB.categoryFilters = FarmBuddyDB.categoryFilters or {}
+
+        local profile = FarmTracker:GetProfile()
+
+        -- Migração: se existir categoryFilters no formato antigo, mover para o profile
+        if FarmBuddyDB.categoryFilters then
+            for k, v in pairs(FarmBuddyDB.categoryFilters) do
+                if profile.categoryFilters[k] == nil then
+                    profile.categoryFilters[k] = v
+                end
+            end
+            FarmBuddyDB.categoryFilters = nil
+        end
 
         -- Inicializa filtros padrão se não existirem
         for sectionName, categoryList in pairs(FarmTracker.categoryList) do
             for _, category in ipairs(categoryList) do
                 local key = sectionName .. "::" .. category
-                if FarmBuddyDB.categoryFilters[key] == nil then
-                    FarmBuddyDB.categoryFilters[key] = true
+                if profile.categoryFilters[key] == nil then
+                    profile.categoryFilters[key] = true
                 end
             end
         end

@@ -45,10 +45,36 @@ closeButton:SetScript("OnClick", function()
     f:Hide() 
 end)
 
+-- History Button
+local historyButton = CreateFrame("Button", nil, titleBar)
+historyButton:SetSize(22, 22)
+historyButton:SetPoint("RIGHT", closeButton, "LEFT", 1, 0)
+historyButton:SetHighlightTexture("Interface\\Buttons\\UI-Common-MouseHilight")
+
+local historyIcon = historyButton:CreateTexture(nil, "ARTWORK")
+historyIcon:SetPoint("CENTER", historyButton, "CENTER", 0, 0)
+historyIcon:SetSize(18, 18)
+historyIcon:SetTexture("Interface\\Icons\\INV_Misc_PocketWatch_01")
+
+historyButton:SetScript("OnClick", function()
+    if FarmBuddyHistory then
+        FarmBuddyHistory:Toggle()
+    end
+end)
+
+historyButton:SetScript("OnEnter", function(self)
+    GameTooltip:SetOwner(self, "ANCHOR_RIGHT")
+    GameTooltip:AddLine("Histórico de Farm")
+    GameTooltip:Show()
+end)
+historyButton:SetScript("OnLeave", function()
+    GameTooltip:Hide()
+end)
+
 -- Settings Button
 local settingsButton = CreateFrame("Button", nil, titleBar)
 settingsButton:SetSize(22, 22)
-settingsButton:SetPoint("RIGHT", closeButton, "LEFT", 1, 0)
+settingsButton:SetPoint("RIGHT", historyButton, "LEFT", 1, 0)
 settingsButton:SetHighlightTexture("Interface\\Buttons\\UI-Common-MouseHilight")
 
 local settingsIcon = settingsButton:CreateTexture(nil, "ARTWORK")

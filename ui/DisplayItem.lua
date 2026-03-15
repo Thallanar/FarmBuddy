@@ -88,7 +88,7 @@ function DisplayItem:UpdateDisplay(lootTable)
         local sampleItem = categorized[category][1]
         local group = sampleItem.group or "Outros"
         local key = group .. "::" .. category
-        local showCategory = FarmBuddyDB.categoryFilters[key] ~= false
+        local showCategory = FarmTracker:GetProfile().categoryFilters[key] ~= false
 
         if showCategory then
             local items = categorized[category]

@@ -15,12 +15,25 @@ function FarmTracker:StartSession()
     self.sessionActive = true
     self.paused = false
     self.startTime = GetTime()
+    self.sessionStartDate = date("%Y-%m-%d %H:%M:%S")
     self.totalPausedTime = 0
     self.lootTable = {}
 end
 
 function FarmTracker:StopSession()
     if not self.sessionActive then return end
+
+    -- Salva a sessão no histórico do profile
+    local duration = self:GetElapsedTime()
+    if duration > 0 and next(self.lootTable) then
+        local profile = self:GetProfile()
+        table.insert(profile.sessionHistory, {
+            startTime = self.sessionStartDate or "desconhecido",
+            duration = math.floor(duration),
+            lootTable = CopyTable(self.lootTable),
+        })
+    end
+
     self.sessionActive = false
 end
 
@@ -61,7 +74,7 @@ function FarmTracker:isPaused()
 end
 
 local function IsFarmPaused()
-    return FarmTracker.IsPaused and FarmTracker:IsPaused()
+    return FarmTracker.isPaused and FarmTracker:isPaused()
 end
 
 mainUI:SetScript("OnEvent", function(_, event) 
@@ -70,11 +83,11 @@ mainUI:SetScript("OnEvent", function(_, event)
         for i = 1, numLootItems do
             local itemLink = GetLootSlotLink(i)
             if itemLink then
-                local itemName, _, itemQuality, _, _, itemType, itemSubType, _, _, iconTexture = GetItemInfo(itemLink)
+                local itemName, _, itemQuality, _, _, itemType, itemSubType, _, _, iconTexture = C_Item.GetItemInfo(itemLink)
                 local _, _, quantity = GetLootSlotInfo(i)
                 quantity = quantity or 1
 
-                local itemID = GetItemInfoInstant(itemLink)
+                local itemID = C_Item.GetItemInfoInstant(itemLink)
                 local categoryGroup = FarmTracker:GetCategoryGroup(itemSubType)
                 FarmTracker.lootTable[itemID] = FarmTracker.lootTable[itemID] or {
                     count = 0,
@@ -89,7 +102,6 @@ mainUI:SetScript("OnEvent", function(_, event)
 
                 -- Atualiza a exibição
                 if DisplayItem and DisplayItem.UpdateDisplay then
-                    DisplayItem:UpdateDisplay(FarmTracker.lootTable)
                     DisplayItem:UpdateDisplay(FarmTracker.lootTable)
                 end
             end
