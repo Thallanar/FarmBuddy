@@ -71,10 +71,36 @@ historyButton:SetScript("OnLeave", function()
     GameTooltip:Hide()
 end)
 
+-- Import Button
+local importButton = CreateFrame("Button", nil, titleBar)
+importButton:SetSize(22, 22)
+importButton:SetPoint("RIGHT", historyButton, "LEFT", 1, 0)
+importButton:SetHighlightTexture("Interface\\Buttons\\UI-Common-MouseHilight")
+
+local importIcon = importButton:CreateTexture(nil, "ARTWORK")
+importIcon:SetPoint("CENTER", importButton, "CENTER", 0, 0)
+importIcon:SetSize(18, 18)
+importIcon:SetTexture("Interface\\AddOns\\FarmBuddy\\icon\\map.png")
+
+importButton:SetScript("OnClick", function()
+    if FarmBuddyImportManager then
+        FarmBuddyImportManager:Toggle()
+    end
+end)
+
+importButton:SetScript("OnEnter", function(self)
+    GameTooltip:SetOwner(self, "ANCHOR_RIGHT")
+    GameTooltip:AddLine("Importar GatherMate2")
+    GameTooltip:Show()
+end)
+importButton:SetScript("OnLeave", function()
+    GameTooltip:Hide()
+end)
+
 -- Settings Button
 local settingsButton = CreateFrame("Button", nil, titleBar)
 settingsButton:SetSize(22, 22)
-settingsButton:SetPoint("RIGHT", historyButton, "LEFT", 1, 0)
+settingsButton:SetPoint("RIGHT", importButton, "LEFT", 1, 0)
 settingsButton:SetHighlightTexture("Interface\\Buttons\\UI-Common-MouseHilight")
 
 local settingsIcon = settingsButton:CreateTexture(nil, "ARTWORK")

@@ -3,7 +3,7 @@ mainUI:RegisterEvent("LOOT_OPENED")
 
 FarmTracker = FarmTracker or {}
 FarmTracker.name = "FarmBuddy"
-FarmTracker.version = "0.1"
+FarmTracker.version = C_AddOns.GetAddOnMetadata("FarmBuddy", "Version")
 FarmTracker.sessionActive = false
 FarmTracker.paused = false
 FarmTracker.startTime = 0

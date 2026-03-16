@@ -1,7 +1,7 @@
 ## Interface: 120001
 ## Title: FarmBuddy
 ## Notes: Rastreia coleta de itens durante sessões de farm
-## Version: 0.1
+## Version: 1.1.0
 ## Author: Thallanar
 ## SavedVariables: FarmBuddyDB
 
@@ -9,13 +9,19 @@ libs/LibStub/LibStub.lua
 libs/CallbackHandler-1.0/CallbackHandler-1.0.lua
 libs/LibDataBroker-1.1/LibDataBroker-1.1.lua
 libs/LibDBIcon-1.0/LibDBIcon-1.0.lua
+libs/AceSerializer-3.0/AceSerializer-3.0.lua
+libs/LibDeflate/LibDeflate.lua
+libs/LibBase64-1.0/LibBase64-1.0.lua
 
 core/Init.lua
 core/Tracker.lua
 core/PriceSource.lua
+core/GatherImport.lua
 core/Minimap.lua
 ui/DisplayItem.lua
 ui/SettingsFrame.lua
 core/Settings.lua
 ui/HistoryFrame.lua
+ui/MapPreviewFrame.lua
+ui/ImportManagerFrame.lua
 ui/MainFrame.lua

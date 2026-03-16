@@ -62,7 +62,10 @@ local eventFrame = CreateFrame("Frame")
 eventFrame:RegisterEvent("ADDON_LOADED")
 eventFrame:SetScript("OnEvent", function(self, event, addonName)
     if addonName == "FarmBuddy" then
-        print("|cff00ff00", addonName)
+        C_Timer.After(3, function()
+            local version = C_AddOns.GetAddOnMetadata("FarmBuddy", "Version")
+            print("|cff00ff00[FarmBuddy]|r v" .. (version or "?") .. " carregado! Digite |cff00ff00/farmbuddy|r para abrir.")
+        end)
 
         local profile = FarmTracker:GetProfile()
 
@@ -90,11 +93,72 @@ eventFrame:SetScript("OnEvent", function(self, event, addonName)
             TrackerSettings:BuildCheckboxes(FarmTracker.categoryList or {})
         end
 
+        -- Migração: inicializa gatherImports se não existir
+        if not profile.gatherImports then
+            profile.gatherImports = {}
+        end
+
         -- Restaura visibilidade do frame principal
         if profile.frameVisible and FarmTracker.frame then
             FarmTracker.frame:Show()
         end
 
         self:UnregisterEvent("ADDON_LOADED")
+
+        -- Auto-detecção do GatherMate2 após todos os addons carregarem
+        self:RegisterEvent("PLAYER_LOGIN")
+    elseif event == "PLAYER_LOGIN" then
+        self:UnregisterEvent("PLAYER_LOGIN")
+
+        if not FarmBuddyGatherImport then
+            return
+        end
+
+        -- Verifica se existe alguma global do GatherMate2 com dados
+        local hasGM2Data = false
+        local gm2Prefixes = { "Herb", "Mine", "Fish", "Gas", "Treasure", "Archaeology", "Logging" }
+        local gm2Suffixes = { "", "DF", "TWW", "MN" }
+        for _, prefix in ipairs(gm2Prefixes) do
+            for _, suffix in ipairs(gm2Suffixes) do
+                local globalName = "GatherMate2" .. prefix .. "DB" .. suffix
+                if _G[globalName] and type(_G[globalName]) == "table" and next(_G[globalName]) then
+                    hasGM2Data = true
+                    break
+                end
+            end
+            if hasGM2Data then break end
+        end
+
+        if not hasGM2Data then
+            return
+        end
+
+        local profile = FarmTracker:GetProfile()
+        profile.gatherImports = profile.gatherImports or {}
+
+        -- Verifica se já existe um import automático
+        local hasAutoImport = false
+        for _, entry in ipairs(profile.gatherImports) do
+            if entry.source == "gathermate2db_auto" then
+                hasAutoImport = true
+                break
+            end
+        end
+
+        if not hasAutoImport then
+            local parsedData, err = FarmBuddyGatherImport:ParseFromDB(nil)
+            if parsedData and parsedData.totalNodes > 0 then
+                FarmBuddyGatherImport:SaveImport(
+                    "GatherMate2 (auto-detectado)",
+                    parsedData,
+                    "gathermate2db_auto"
+                )
+                C_Timer.After(4, function()
+                    print("|cff00ff00[FarmBuddy]|r Dados do GatherMate2 detectados! "
+                        .. parsedData.totalNodes .. " nodes importados automaticamente. "
+                        .. "Abra o Import Manager para visualizar.")
+                end)
+            end
+        end
     end
 end)
