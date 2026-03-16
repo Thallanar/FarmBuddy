@@ -54,7 +54,7 @@ historyButton:SetHighlightTexture("Interface\\Buttons\\UI-Common-MouseHilight")
 local historyIcon = historyButton:CreateTexture(nil, "ARTWORK")
 historyIcon:SetPoint("CENTER", historyButton, "CENTER", 0, 0)
 historyIcon:SetSize(18, 18)
-historyIcon:SetTexture("Interface\\Icons\\INV_Misc_PocketWatch_01")
+historyIcon:SetTexture("Interface\\AddOns\\FarmBuddy\\icon\\history.png")
 
 historyButton:SetScript("OnClick", function()
     if FarmBuddyHistory then
@@ -139,6 +139,17 @@ f:SetScript("OnUpdate", function(self, elapsed)
     else
         timerText:SetText("Tempo: 00:00:00")
     end
+end)
+
+-- Salva estado de visibilidade no profile
+f:SetScript("OnShow", function()
+    local profile = FarmTracker:GetProfile()
+    profile.frameVisible = true
+end)
+
+f:SetScript("OnHide", function()
+    local profile = FarmTracker:GetProfile()
+    profile.frameVisible = false
 end)
 
 f:Hide()

@@ -36,6 +36,7 @@ function FarmTracker:GetProfile()
         FarmBuddyDB.profiles[key] = {
             categoryFilters = {},
             sessionHistory = {},
+            frameVisible = false,
         }
     end
     return FarmBuddyDB.profiles[key]
@@ -87,6 +88,11 @@ eventFrame:SetScript("OnEvent", function(self, event, addonName)
 
         if TrackerSettings and TrackerSettings.frame then
             TrackerSettings:BuildCheckboxes(FarmTracker.categoryList or {})
+        end
+
+        -- Restaura visibilidade do frame principal
+        if profile.frameVisible and FarmTracker.frame then
+            FarmTracker.frame:Show()
         end
 
         self:UnregisterEvent("ADDON_LOADED")

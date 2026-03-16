@@ -83,7 +83,7 @@ mainUI:SetScript("OnEvent", function(_, event)
         for i = 1, numLootItems do
             local itemLink = GetLootSlotLink(i)
             if itemLink then
-                local itemName, _, itemQuality, _, _, itemType, itemSubType, _, _, iconTexture = C_Item.GetItemInfo(itemLink)
+                local itemName, _, itemQuality, _, _, itemType, itemSubType, _, _, iconTexture, _, _, _, bindType = C_Item.GetItemInfo(itemLink)
                 local _, _, quantity = GetLootSlotInfo(i)
                 quantity = quantity or 1
 
@@ -96,6 +96,7 @@ mainUI:SetScript("OnEvent", function(_, event)
                     link = itemLink,
                     group = categoryGroup,
                     category = itemSubType,
+                    bindType = bindType,
                 }
 
                 FarmTracker.lootTable[itemID].count = FarmTracker.lootTable[itemID].count + quantity
