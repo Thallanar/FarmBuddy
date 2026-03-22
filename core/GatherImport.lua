@@ -298,6 +298,89 @@ function FarmBuddyGatherImport:DeleteImport(index)
     return false
 end
 
+-- Mapeamento reverso: nodeType -> chave do GatherMate2 export
+local EXPORT_KEY_MAP = {
+    ["Herb"]          = "Herb Gathering",
+    ["Mine"]          = "Mining",
+    ["Fish"]          = "Fishing",
+    ["Gas"]           = "Gas Extraction",
+    ["Treasure"]      = "Treasure",
+    ["Archaeology"]   = "Archaeology",
+    ["Logging"]       = "Logging",
+}
+
+-- Codifica x, y (0-100) de volta para coordenada inteira do GatherMate2
+local function EncodeCoord(x, y)
+    local cx = math.floor(x * 100 + 0.5)
+    local cy = math.floor(y * 100 + 0.5)
+    return cx * 1000000 + cy * 100
+end
+
+-- Exporta um import como string compatível com GatherMate2_ImportExport
+function FarmBuddyGatherImport:ExportToString(index)
+    local profile = FarmTracker:GetProfile()
+    if not profile.gatherImports or not profile.gatherImports[index] then
+        return nil, "Import não encontrado."
+    end
+
+    local importData = profile.gatherImports[index]
+
+    -- Reconstrói a tabela no formato GatherMate2: nodeTypeName -> mapID -> coordInt -> nodeID
+    local rawData = {}
+    for mapID, nodes in pairs(importData.nodes) do
+        for _, node in ipairs(nodes) do
+            local exportKey = EXPORT_KEY_MAP[node.nodeType]
+            if exportKey then
+                if not rawData[exportKey] then
+                    rawData[exportKey] = {}
+                end
+                if not rawData[exportKey][mapID] then
+                    rawData[exportKey][mapID] = {}
+                end
+                local coordInt = EncodeCoord(node.x, node.y)
+                rawData[exportKey][mapID][coordInt] = node.nodeID or 0
+            end
+        end
+    end
+
+    -- AceSerializer serialize
+    local AceSerializer = LibStub and LibStub("AceSerializer-3.0", true)
+    if not AceSerializer then
+        return nil, "AceSerializer-3.0 não encontrada."
+    end
+
+    local ok, serialized = pcall(AceSerializer.Serialize, AceSerializer, rawData)
+    if not ok or not serialized then
+        return nil, "Erro ao serializar dados: " .. tostring(serialized)
+    end
+
+    -- LibDeflate compress
+    local LibDeflate = LibStub and LibStub("LibDeflate", true)
+    if not LibDeflate then
+        return nil, "LibDeflate não encontrada."
+    end
+
+    local compressed
+    ok, compressed = pcall(LibDeflate.CompressDeflate, LibDeflate, serialized)
+    if not ok or not compressed then
+        return nil, "Erro ao comprimir dados: " .. tostring(compressed)
+    end
+
+    -- Base64 encode
+    local LibBase64 = LibStub and LibStub("LibBase64-1.0", true)
+    if not LibBase64 then
+        return nil, "LibBase64-1.0 não encontrada."
+    end
+
+    local encoded
+    ok, encoded = pcall(LibBase64.Encode, LibBase64, compressed)
+    if not ok or not encoded then
+        return nil, "Erro ao codificar Base64: " .. tostring(encoded)
+    end
+
+    return encoded
+end
+
 -- Renomeia import
 function FarmBuddyGatherImport:RenameImport(index, newName)
     local profile = FarmTracker:GetProfile()

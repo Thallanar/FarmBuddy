@@ -117,33 +117,59 @@ local pauseButton = CreateFrame("Button", nil, f, "GameMenuButtonTemplate")
 pauseButton:SetPoint("CENTER", f)
 pauseButton:SetSize(120, 20)
 pauseButton:SetText("Pausar")
-pauseButton:SetScript("OnClick", function()
-    if FarmTracker:isPaused() then
-        FarmTracker:Resume()
-        pauseButton:SetText("Pausar")
-    else
-        FarmTracker:Pause()
-        pauseButton:SetText("Retomar")
-    end
-end)
 
--- Interface do Botão de Start: 
+-- Interface do Botão de Start:
 local startButton = CreateFrame("Button", nil, f, "GameMenuButtonTemplate")
 startButton:SetPoint("BOTTOM", pauseButton, "TOP", 0, 5)
 startButton:SetSize(120, 20)
 startButton:SetText("Iniciar")
-startButton:SetScript("OnClick", function()
-    FarmTracker:StartSession()
-end)
 
 -- Interface do Botão de Stop:
 local stopButton = CreateFrame("Button", nil, f, "GameMenuButtonTemplate")
 stopButton:SetPoint("TOP", pauseButton, "BOTTOM", 0, -5)
 stopButton:SetSize(120, 20)
 stopButton:SetText("Parar")
+
+-- Atualiza estado dos botões conforme sessão
+local function UpdateButtonStates()
+    if FarmTracker.sessionActive then
+        startButton:Disable()
+        pauseButton:Enable()
+        stopButton:Enable()
+        if FarmTracker:isPaused() then
+            pauseButton:SetText("Retomar")
+        else
+            pauseButton:SetText("Pausar")
+        end
+    else
+        startButton:Enable()
+        pauseButton:Disable()
+        stopButton:Disable()
+        pauseButton:SetText("Pausar")
+    end
+end
+
+startButton:SetScript("OnClick", function()
+    FarmTracker:StartSession()
+    UpdateButtonStates()
+end)
+
+pauseButton:SetScript("OnClick", function()
+    if FarmTracker:isPaused() then
+        FarmTracker:Resume()
+    else
+        FarmTracker:Pause()
+    end
+    UpdateButtonStates()
+end)
+
 stopButton:SetScript("OnClick", function()
     FarmTracker:StopSession()
+    UpdateButtonStates()
 end)
+
+-- Estado inicial: pause e stop desabilitados
+UpdateButtonStates()
 
 -- Tempo decorrido (FontString)
 local timerText = f:CreateFontString(nil, "OVERLAY", "GameFontNormalLarge")

@@ -421,6 +421,61 @@ renameEditBox:SetScript("OnEnterPressed", function()
 end)
 
 -- ============================
+-- EXPORT DIALOG
+-- ============================
+local exportFrame = CreateFrame("Frame", nil, frame, BackdropTemplateMixin and "BackdropTemplate")
+exportFrame:SetSize(410, 250)
+exportFrame:SetPoint("CENTER", frame, "CENTER", 0, 0)
+exportFrame:SetBackdrop({
+    bgFile = "Interface\\DialogFrame\\UI-DialogBox-Background",
+    edgeFile = "Interface\\DialogFrame\\UI-DialogBox-Border",
+    tile = true, tileSize = 32, edgeSize = 32,
+    insets = { left = 11, right = 12, top = 12, bottom = 11 }
+})
+exportFrame:SetFrameLevel(frame:GetFrameLevel() + 20)
+exportFrame:Hide()
+
+local exportTitle = exportFrame:CreateFontString(nil, "OVERLAY", "GameFontNormal")
+exportTitle:SetPoint("TOP", 0, -15)
+exportTitle:SetText("Exportar Import")
+
+local exportScrollFrame = CreateFrame("ScrollFrame", "FarmBuddyExportScroll", exportFrame, "UIPanelScrollFrameTemplate")
+exportScrollFrame:SetPoint("TOPLEFT", 15, -35)
+exportScrollFrame:SetPoint("BOTTOMRIGHT", -35, 45)
+
+local exportEditBox = CreateFrame("EditBox", "FarmBuddyExportEditBox", exportScrollFrame)
+exportEditBox:SetMultiLine(true)
+exportEditBox:SetAutoFocus(false)
+exportEditBox:SetFontObject("ChatFontNormal")
+exportEditBox:SetWidth(360)
+exportEditBox:SetScript("OnEscapePressed", function(self) self:ClearFocus() end)
+exportScrollFrame:SetScrollChild(exportEditBox)
+
+local btnExportClose = CreateFrame("Button", nil, exportFrame, "GameMenuButtonTemplate")
+btnExportClose:SetSize(100, 24)
+btnExportClose:SetPoint("BOTTOM", 0, 12)
+btnExportClose:SetText("Fechar")
+btnExportClose:SetScript("OnClick", function()
+    exportEditBox:SetText("")
+    exportFrame:Hide()
+    scrollFrame:Show()
+end)
+
+local function ShowExportDialog(index)
+    local exportString, err = FarmBuddyGatherImport:ExportToString(index)
+    if not exportString then
+        print("|cffff0000[FarmBuddy]|r " .. (err or "Erro ao exportar"))
+        return
+    end
+
+    scrollFrame:Hide()
+    exportEditBox:SetText(exportString)
+    exportFrame:Show()
+    exportEditBox:SetFocus()
+    exportEditBox:HighlightText()
+end
+
+-- ============================
 -- IMPORT LIST
 -- ============================
 BuildImportList = function()
@@ -499,10 +554,19 @@ BuildImportList = function()
             renameEditBox:SetFocus()
         end)
 
+        -- Botão Exportar
+        local btnExport = CreateFrame("Button", nil, row, "GameMenuButtonTemplate")
+        btnExport:SetSize(70, 20)
+        btnExport:SetPoint("LEFT", btnRename, "RIGHT", 5, 0)
+        btnExport:SetText("Exportar")
+        btnExport:SetScript("OnClick", function()
+            ShowExportDialog(i)
+        end)
+
         -- Botão Excluir
         local btnDelete = CreateFrame("Button", nil, row, "GameMenuButtonTemplate")
         btnDelete:SetSize(70, 20)
-        btnDelete:SetPoint("LEFT", btnRename, "RIGHT", 5, 0)
+        btnDelete:SetPoint("LEFT", btnExport, "RIGHT", 5, 0)
         btnDelete:SetText("Excluir")
         btnDelete:SetScript("OnClick", function()
             StaticPopupDialogs["FARMBUDDY_DELETE_IMPORT"] = {
@@ -537,6 +601,7 @@ function FarmBuddyImportManager:Toggle()
         nameFrame:Hide()
         typeFrame:Hide()
         renameFrame:Hide()
+        exportFrame:Hide()
         scrollFrame:Show()
         BuildImportList()
         frame:Show()

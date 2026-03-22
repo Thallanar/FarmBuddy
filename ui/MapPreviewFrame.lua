@@ -206,7 +206,7 @@ local function LoadMapTextures(mapID)
     return true
 end
 
--- Nomes em PT dos tipos de node
+-- Nomes em pt-BR dos tipos de node
 local nodeTypePT = {
     ["Herb"] = "Erva",
     ["Mine"] = "Minério",
