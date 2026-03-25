@@ -97,10 +97,37 @@ importButton:SetScript("OnLeave", function()
     GameTooltip:Hide()
 end)
 
+-- Mob Map Button
+local mobMapButton = CreateFrame("Button", nil, titleBar)
+mobMapButton:SetSize(22, 22)
+mobMapButton:SetPoint("RIGHT", importButton, "LEFT", 1, 0)
+mobMapButton:SetHighlightTexture("Interface\\Buttons\\UI-Common-MouseHilight")
+
+local mobMapIcon = mobMapButton:CreateTexture(nil, "ARTWORK")
+mobMapIcon:SetPoint("CENTER", mobMapButton, "CENTER", 0, 0)
+mobMapIcon:SetSize(18, 18)
+mobMapIcon:SetTexture("Interface\\Icons\\Ability_Druid_PrimalPrecision") -- ícone de pata (skinning)
+
+mobMapButton:SetScript("OnClick", function()
+    if FarmBuddyMapPreview and FarmBuddyMobTracker then
+        FarmBuddyMapPreview:Show(nil, "mobs")
+    end
+end)
+
+mobMapButton:SetScript("OnEnter", function(self)
+    GameTooltip:SetOwner(self, "ANCHOR_RIGHT")
+    GameTooltip:AddLine("Mapa de Mobs")
+    GameTooltip:AddLine("Skinning & Tailoring", 0.5, 0.5, 0.5)
+    GameTooltip:Show()
+end)
+mobMapButton:SetScript("OnLeave", function()
+    GameTooltip:Hide()
+end)
+
 -- Settings Button
 local settingsButton = CreateFrame("Button", nil, titleBar)
 settingsButton:SetSize(22, 22)
-settingsButton:SetPoint("RIGHT", importButton, "LEFT", 1, 0)
+settingsButton:SetPoint("RIGHT", mobMapButton, "LEFT", 1, 0)
 settingsButton:SetHighlightTexture("Interface\\Buttons\\UI-Common-MouseHilight")
 
 local settingsIcon = settingsButton:CreateTexture(nil, "ARTWORK")

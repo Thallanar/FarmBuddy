@@ -6,7 +6,14 @@ local MAP_HEIGHT = 668
 local FRAME_WIDTH = MAP_WIDTH + 40
 local FRAME_HEIGHT = MAP_HEIGHT + 90
 local PIN_SIZE = 8
+local MOB_PIN_SIZE = 16
+local MOB_PORTRAIT_SIZE = 24
 local MAX_TILES = 256
+
+-- Estado do modo atual
+local currentMode = "nodes"         -- "nodes" | "mobs"
+local currentProfessionFilter = "skinning"
+local currentDisplayMode = "icon"   -- "icon" | "portrait"
 
 local frame = CreateFrame("Frame", "FarmBuddyMapPreviewFrame", UIParent, BackdropTemplateMixin and "BackdropTemplate")
 frame:SetSize(FRAME_WIDTH, FRAME_HEIGHT)
@@ -71,6 +78,7 @@ pinContainer:SetFrameLevel(mapTextureFrame:GetFrameLevel() + 10)
 -- Pools
 local tileTextures = {}
 local pinPool = {}
+local mobPinPool = {}
 local activePins = {}
 
 local currentImportData = nil
@@ -102,6 +110,9 @@ local function GetOrCreatePin(index)
         if self.tooltipText then
             GameTooltip:SetOwner(self, "ANCHOR_RIGHT")
             GameTooltip:AddLine(self.tooltipText)
+            if self.tooltipSubText then
+                GameTooltip:AddLine(self.tooltipSubText, 0.5, 0.5, 0.5)
+            end
             GameTooltip:Show()
         end
     end)
@@ -110,6 +121,75 @@ local function GetOrCreatePin(index)
     end)
 
     pinPool[index] = pin
+    return pin
+end
+
+-- ============================
+-- MOB PIN POOL (portrait + ícone)
+-- ============================
+
+-- Ícones fallback por tipo de criatura
+local mobTypeIcons = {
+    ["Beast"]     = "Interface\\Icons\\INV_Misc_Pelt_Bear_01",
+    ["Humanoid"]  = "Interface\\Icons\\INV_Fabric_Silk_01",
+    ["Dragonkin"] = "Interface\\Icons\\INV_Misc_MonsterScales_15",
+}
+
+local function GetOrCreateMobPin(index)
+    if mobPinPool[index] then
+        return mobPinPool[index]
+    end
+
+    local pin = CreateFrame("Frame", nil, pinContainer)
+    pin:SetSize(MOB_PORTRAIT_SIZE, MOB_PORTRAIT_SIZE)
+
+    -- Retrato (para modo portrait)
+    local portrait = pin:CreateTexture(nil, "ARTWORK")
+    portrait:SetAllPoints()
+    pin.portrait = portrait
+
+    -- Máscara circular para o retrato
+    local mask = pin:CreateMaskTexture()
+    mask:SetTexture("Interface\\CHARACTERFRAME\\TempPortraitAlphaMask", "CLAMPTOBLACKADDITIVE", "CLAMPTOBLACKADDITIVE")
+    mask:SetAllPoints()
+    portrait:AddMaskTexture(mask)
+    pin.mask = mask
+
+    -- Borda circular dourada
+    local border = pin:CreateTexture(nil, "OVERLAY")
+    border:SetTexture("Interface\\Minimap\\MiniMap-TrackingBorder")
+    border:SetSize(MOB_PORTRAIT_SIZE + 10, MOB_PORTRAIT_SIZE + 10)
+    border:SetPoint("CENTER")
+    pin.border = border
+
+    -- Ícone (para modo ícone)
+    local icon = pin:CreateTexture(nil, "ARTWORK")
+    icon:SetAllPoints()
+    pin.icon = icon
+
+    -- Máscara circular para o ícone também
+    local iconMask = pin:CreateMaskTexture()
+    iconMask:SetTexture("Interface\\CHARACTERFRAME\\TempPortraitAlphaMask", "CLAMPTOBLACKADDITIVE", "CLAMPTOBLACKADDITIVE")
+    iconMask:SetAllPoints()
+    icon:AddMaskTexture(iconMask)
+    pin.iconMask = iconMask
+
+    pin:EnableMouse(true)
+    pin:SetScript("OnEnter", function(self)
+        if self.tooltipText then
+            GameTooltip:SetOwner(self, "ANCHOR_RIGHT")
+            GameTooltip:AddLine(self.tooltipText)
+            if self.tooltipSubText then
+                GameTooltip:AddLine(self.tooltipSubText, 0.5, 0.5, 0.5)
+            end
+            GameTooltip:Show()
+        end
+    end)
+    pin:SetScript("OnLeave", function()
+        GameTooltip:Hide()
+    end)
+
+    mobPinPool[index] = pin
     return pin
 end
 
@@ -217,7 +297,10 @@ local nodeTypePT = {
     ["Logging"] = "Madeira",
 }
 
--- Renderiza pins
+-- ============================
+-- RENDERIZAÇÃO DE PINS (NODES)
+-- ============================
+
 local function RenderPins(mapID, importData)
     HideAllPins()
 
@@ -228,7 +311,7 @@ local function RenderPins(mapID, importData)
     local nodes = importData.nodes[mapID]
     local containerW = pinContainer:GetWidth()
     local containerH = pinContainer:GetHeight()
-    local colors = FarmBuddyGatherImport.nodeColors
+    local colors = FarmBuddyGatherImport and FarmBuddyGatherImport.nodeColors or {}
 
     for i, node in ipairs(nodes) do
         local pin = GetOrCreatePin(i)
@@ -242,9 +325,91 @@ local function RenderPins(mapID, importData)
         pin.texture:SetVertexColor(color[1], color[2], color[3])
 
         pin.tooltipText = nodeTypePT[node.nodeType] or node.nodeType
+        pin.tooltipSubText = nil
 
         pin:Show()
         table.insert(activePins, pin)
+    end
+end
+
+-- ============================
+-- RENDERIZAÇÃO DE PINS (MOBS)
+-- ============================
+
+local function RenderMobPins(mapID, mobData, filter, displayMode)
+    HideAllPins()
+
+    if not mobData or not mobData.mobs or not mobData.mobs[mapID] then
+        return
+    end
+
+    local mobs = mobData.mobs[mapID]
+    local containerW = pinContainer:GetWidth()
+    local containerH = pinContainer:GetHeight()
+    local pinIndex = 0
+
+    for _, mob in ipairs(mobs) do
+        if FarmBuddyMobTracker:MatchesFilter(mob, filter) then
+            pinIndex = pinIndex + 1
+            local pin = GetOrCreateMobPin(pinIndex)
+            local px = (mob.x / 100) * containerW
+            local py = (mob.y / 100) * containerH
+
+            pin:ClearAllPoints()
+            pin:SetPoint("CENTER", pinContainer, "TOPLEFT", px, -py)
+
+            -- Buscar displayID: do mob tracked ou da tabela de lookup
+            local displayID = mob.displayID
+            if not displayID and mob.npcID and FarmBuddyMobTracker then
+                displayID = FarmBuddyMobTracker:GetDisplayID(mob.npcID)
+            end
+
+            local showPortrait = false
+            if displayMode == "portrait" and displayID then
+                -- Modo retrato: tenta renderizar, fallback se falhar
+                local retOk = pcall(SetPortraitTextureFromCreatureDisplayID, pin.portrait, displayID)
+                if retOk then
+                    pin:SetSize(MOB_PORTRAIT_SIZE, MOB_PORTRAIT_SIZE)
+                    pin.portrait:Show()
+                    pin.icon:Hide()
+                    pin.border:Show()
+                    pin.border:SetSize(MOB_PORTRAIT_SIZE + 10, MOB_PORTRAIT_SIZE + 10)
+                    showPortrait = true
+                end
+            end
+
+            if not showPortrait then
+                -- Modo ícone (ou fallback se sem displayID / portrait falhou)
+                pin:SetSize(MOB_PIN_SIZE, MOB_PIN_SIZE)
+                pin.portrait:Hide()
+                pin.border:Hide()
+                pin.icon:Show()
+
+                local iconTexture = mobTypeIcons[mob.creatureType] or mobTypeIcons["Beast"]
+                pin.icon:SetTexture(iconTexture)
+                pin.icon:SetTexCoord(0.08, 0.92, 0.08, 0.92) -- recorta bordas do ícone
+            end
+
+            -- Tooltip
+            local typePT = FarmBuddyMobTracker.creatureTypePT[mob.creatureType] or mob.creatureType
+            local profLabel = ""
+            if mob.skinnable then
+                profLabel = "|cffcc6600Couraria|r"
+            elseif mob.clothDropper then
+                profLabel = "|cff9933ccAlfaiataria|r"
+            end
+
+            pin.tooltipText = mob.name or "Mob"
+            pin.tooltipSubText = typePT .. (profLabel ~= "" and ("  -  " .. profLabel) or "")
+
+            -- Indicador visual de mob tracked (não hardcoded)
+            if mob.trackedAt then
+                pin.tooltipSubText = pin.tooltipSubText .. "\n|cff00ff00Rastreado|r"
+            end
+
+            pin:Show()
+            table.insert(activePins, pin)
+        end
     end
 end
 
@@ -256,20 +421,37 @@ infoBar:SetPoint("BOTTOM", frame, "BOTTOM", 0, 15)
 local infoText = infoBar:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
 infoText:SetPoint("LEFT", 0, 0)
 
-local function UpdateInfoBar(importData, mapID)
-    if not importData then
+local function UpdateInfoBar(data, mapID)
+    if not data then
         infoText:SetText("")
         return
     end
 
-    local nodeCount = 0
-    if importData.nodes and importData.nodes[mapID] then
-        nodeCount = #importData.nodes[mapID]
-    end
+    if currentMode == "mobs" then
+        -- Contar mobs filtrados neste mapa
+        local filteredCount = 0
+        if data.mobs and data.mobs[mapID] then
+            for _, mob in ipairs(data.mobs[mapID]) do
+                if FarmBuddyMobTracker:MatchesFilter(mob, currentProfessionFilter) then
+                    filteredCount = filteredCount + 1
+                end
+            end
+        end
 
-    local mapCount = importData.mapList and #importData.mapList or 0
-    infoText:SetText(string.format("%d nodes neste mapa  |  %d mapas no total  |  %d nodes total",
-        nodeCount, mapCount, importData.totalNodes or 0))
+        local mapCount = data.mapList and #data.mapList or 0
+        local profName = FarmBuddyMobTracker.professionNamePT[currentProfessionFilter] or currentProfessionFilter
+        infoText:SetText(string.format("%d mobs neste mapa  |  %d mapas no total  |  Filtro: %s",
+            filteredCount, mapCount, profName))
+    else
+        local nodeCount = 0
+        if data.nodes and data.nodes[mapID] then
+            nodeCount = #data.nodes[mapID]
+        end
+
+        local mapCount = data.mapList and #data.mapList or 0
+        infoText:SetText(string.format("%d nodes neste mapa  |  %d mapas no total  |  %d nodes total",
+            nodeCount, mapCount, data.totalNodes or 0))
+    end
 end
 
 -- ============================
@@ -300,18 +482,31 @@ local function GetContinentForMap(mapID)
 end
 
 -- Agrupa mapIDs por continente, retorna lista ordenada de grupos
-local function GroupMapsByContinent(mapList, importData)
-    local continentGroups = {}   -- [continentName] = { continentID, maps = { {mapID, name, nodeCount} } }
-    local continentOrder = {}    -- para manter ordem
-    local noContinent = {}       -- mapas sem continente identificado
+-- countKey: "nodes" para modo nodes, "mobs" para modo mobs
+local function GroupMapsByContinent(mapList, data)
+    local continentGroups = {}
+    local continentOrder = {}
+    local noContinent = {}
+
+    local isMobMode = (currentMode == "mobs")
 
     for _, mapID in ipairs(mapList) do
         local mapInfo = C_Map.GetMapInfo(mapID)
         local zoneName = mapInfo and mapInfo.name or ("Mapa " .. mapID)
 
-        local nodeCount = 0
-        if importData.nodes and importData.nodes[mapID] then
-            nodeCount = #importData.nodes[mapID]
+        local count = 0
+        if isMobMode then
+            if data.mobs and data.mobs[mapID] then
+                for _, mob in ipairs(data.mobs[mapID]) do
+                    if FarmBuddyMobTracker:MatchesFilter(mob, currentProfessionFilter) then
+                        count = count + 1
+                    end
+                end
+            end
+        else
+            if data.nodes and data.nodes[mapID] then
+                count = #data.nodes[mapID]
+            end
         end
 
         local continentID, continentName = GetContinentForMap(mapID)
@@ -327,28 +522,25 @@ local function GroupMapsByContinent(mapList, importData)
             table.insert(continentGroups[continentName].maps, {
                 mapID = mapID,
                 name = zoneName,
-                nodeCount = nodeCount,
+                count = count,
             })
         else
             table.insert(noContinent, {
                 mapID = mapID,
                 name = zoneName,
-                nodeCount = nodeCount,
+                count = count,
             })
         end
     end
 
-    -- Ordena continentes alfabeticamente
     table.sort(continentOrder)
 
-    -- Ordena zonas dentro de cada continente
     for _, continentName in ipairs(continentOrder) do
         table.sort(continentGroups[continentName].maps, function(a, b)
             return a.name < b.name
         end)
     end
 
-    -- Ordena mapas sem continente
     table.sort(noContinent, function(a, b) return a.name < b.name end)
 
     return continentGroups, continentOrder, noContinent
@@ -358,29 +550,216 @@ end
 local dropdownFrame = CreateFrame("Frame", "FarmBuddyMapDropdown", frame, "UIDropDownMenuTemplate")
 dropdownFrame:SetPoint("TOPLEFT", 5, -28)
 
-local function LoadMap(mapID, importData)
+-- Forward declare
+local LoadMap
+
+-- ============================
+-- CONTROLES DE MODO (NODES / MOBS)
+-- ============================
+
+local function UpdateModeUI()
+    -- será implementado após criar os botões
+end
+
+-- Botão toggle "Nodes" (canto superior direito)
+local btnModeNodes = CreateFrame("Button", nil, frame, "GameMenuButtonTemplate")
+btnModeNodes:SetSize(70, 22)
+btnModeNodes:SetPoint("TOPRIGHT", frame, "TOPRIGHT", -90, -30)
+btnModeNodes:SetText("Nodes")
+
+-- Botão toggle "Mobs"
+local btnModeMobs = CreateFrame("Button", nil, frame, "GameMenuButtonTemplate")
+btnModeMobs:SetSize(70, 22)
+btnModeMobs:SetPoint("LEFT", btnModeNodes, "RIGHT", 2, 0)
+btnModeMobs:SetText("Mobs")
+
+-- Dropdown de profissão (entre zone dropdown e botões de modo, visível só no modo Mobs)
+local professionDropdown = CreateFrame("Frame", "FarmBuddyProfDropdown", frame, "UIDropDownMenuTemplate")
+professionDropdown:SetPoint("TOPLEFT", dropdownFrame, "TOPRIGHT", -15, 0)
+
+local function InitializeProfessionDropdown(self, level)
+    if level ~= 1 then return end
+
+    local filters = {
+        { key = "skinning",  label = "Couraria (Skinning)" },
+        { key = "tailoring", label = "Alfaiataria (Tailoring)" },
+        { key = "all",       label = "Todos" },
+    }
+
+    for _, f in ipairs(filters) do
+        local info = UIDropDownMenu_CreateInfo()
+        info.text = f.label
+        info.value = f.key
+        info.checked = (currentProfessionFilter == f.key)
+        info.func = function()
+            currentProfessionFilter = f.key
+            UIDropDownMenu_SetText(professionDropdown, f.label)
+
+            -- Salvar no perfil
+            if FarmBuddyMobTracker then
+                FarmBuddyMobTracker:SetSetting("professionFilter", f.key)
+            end
+
+            -- Recarregar dados e mapa
+            if currentMode == "mobs" and FarmBuddyMobTracker then
+                currentImportData = FarmBuddyMobTracker:GetMobData(currentProfessionFilter)
+                if currentMapID then
+                    LoadMap(currentMapID, currentImportData)
+                end
+            end
+        end
+        UIDropDownMenu_AddButton(info, level)
+    end
+end
+
+UIDropDownMenu_Initialize(professionDropdown, InitializeProfessionDropdown)
+UIDropDownMenu_SetWidth(professionDropdown, 160)
+UIDropDownMenu_SetText(professionDropdown, "Couraria (Skinning)")
+professionDropdown:Hide()
+
+-- Toggle de modo visual (portrait / ícone) — mesmo estilo dos filtros (verdinho)
+local displayToggle = CreateFrame("CheckButton", "FarmBuddyDisplayToggle", frame, "ChatConfigCheckButtonTemplate")
+displayToggle:SetPoint("LEFT", professionDropdown, "RIGHT", 10, 0)
+displayToggle.Text:SetText("Usar Retratos")
+
+displayToggle:SetScript("OnClick", function(self)
+    if self:GetChecked() then
+        currentDisplayMode = "portrait"
+    else
+        currentDisplayMode = "icon"
+    end
+
+    -- Salvar no perfil
+    if FarmBuddyMobTracker then
+        FarmBuddyMobTracker:SetSetting("displayMode", currentDisplayMode)
+    end
+
+    -- Re-renderizar pins
+    if currentMode == "mobs" and currentMapID and currentImportData then
+        RenderMobPins(currentMapID, currentImportData, currentProfessionFilter, currentDisplayMode)
+    end
+end)
+
+displayToggle:Hide()
+
+-- Atualiza visibilidade dos controles conforme o modo
+UpdateModeUI = function()
+    if currentMode == "mobs" then
+        professionDropdown:Show()
+        displayToggle:Show()
+
+        -- Visual dos botões de modo
+        btnModeNodes:SetNormalFontObject("GameFontDisable")
+        btnModeMobs:SetNormalFontObject("GameFontHighlight")
+    else
+        professionDropdown:Hide()
+        displayToggle:Hide()
+
+        btnModeNodes:SetNormalFontObject("GameFontHighlight")
+        btnModeMobs:SetNormalFontObject("GameFontDisable")
+    end
+end
+
+-- Função para trocar de modo
+local function SetMode(mode)
+    currentMode = mode
+    UpdateModeUI()
+
+    if mode == "mobs" and FarmBuddyMobTracker then
+        -- Carregar settings do perfil
+        local settings = FarmBuddyMobTracker:GetSettings()
+        if settings then
+            currentProfessionFilter = settings.professionFilter or "skinning"
+            currentDisplayMode = settings.displayMode or "icon"
+            displayToggle:SetChecked(currentDisplayMode == "portrait")
+
+            -- Atualizar texto do dropdown de profissão
+            local labels = {
+                skinning = "Couraria (Skinning)",
+                tailoring = "Alfaiataria (Tailoring)",
+                all = "Todos",
+            }
+            UIDropDownMenu_SetText(professionDropdown, labels[currentProfessionFilter] or "Todos")
+        end
+
+        currentImportData = FarmBuddyMobTracker:GetMobData(currentProfessionFilter)
+        if currentImportData and currentImportData.mapList and #currentImportData.mapList > 0 then
+            LoadMap(currentImportData.mapList[1], currentImportData)
+        else
+            HideAllPins()
+            HideAllTiles()
+            statusText:SetText("|cffff6600Nenhum mob disponível para exibição.|r")
+            UpdateInfoBar(nil, nil)
+        end
+    elseif mode == "nodes" then
+        -- Se não tem dados de nodes, limpa
+        if not currentImportData or not currentImportData.nodes then
+            HideAllPins()
+            HideAllTiles()
+            statusText:SetText("|cffff6600Nenhum dado de nodes carregado. Use o Import Manager.|r")
+            UpdateInfoBar(nil, nil)
+        end
+    end
+end
+
+btnModeNodes:SetScript("OnClick", function()
+    if currentMode ~= "nodes" then
+        SetMode("nodes")
+    end
+end)
+
+btnModeMobs:SetScript("OnClick", function()
+    if currentMode ~= "mobs" then
+        SetMode("mobs")
+    end
+end)
+
+-- Inicializar visual
+UpdateModeUI()
+
+-- ============================
+-- CARREGAMENTO DE MAPA (MODE-AWARE)
+-- ============================
+
+LoadMap = function(mapID, data)
     currentMapID = mapID
 
     local mapInfo = C_Map.GetMapInfo(mapID)
     local zoneName = mapInfo and mapInfo.name or ("Mapa " .. mapID)
-    titleText:SetText("Preview: " .. (importData.name or "Import"))
+
+    if currentMode == "mobs" then
+        titleText:SetText("Mob Map: " .. zoneName)
+    else
+        titleText:SetText("Preview: " .. (data.name or "Import"))
+    end
 
     UIDropDownMenu_SetText(dropdownFrame, zoneName)
 
     local success = LoadMapTextures(mapID)
     if success then
-        RenderPins(mapID, importData)
+        if currentMode == "mobs" then
+            RenderMobPins(mapID, data, currentProfessionFilter, currentDisplayMode)
+        else
+            RenderPins(mapID, data)
+        end
     else
         HideAllPins()
     end
 
-    UpdateInfoBar(importData, mapID)
+    UpdateInfoBar(data, mapID)
 end
+
+-- ============================
+-- DROPDOWN DE ZONAS (MODE-AWARE)
+-- ============================
 
 local function InitializeDropdown(self, level, menuList)
     if not currentImportData or not currentImportData.mapList then
         return
     end
+
+    local isMobMode = (currentMode == "mobs")
+    local countLabel = isMobMode and "mobs" or "nodes"
 
     if level == 1 then
         local groups, order, noContinent = GroupMapsByContinent(currentImportData.mapList, currentImportData)
@@ -388,21 +767,19 @@ local function InitializeDropdown(self, level, menuList)
         for _, continentName in ipairs(order) do
             local group = groups[continentName]
 
-            -- Total de nodes no continente
-            local totalNodes = 0
+            local totalCount = 0
             for _, mapEntry in ipairs(group.maps) do
-                totalNodes = totalNodes + mapEntry.nodeCount
+                totalCount = totalCount + mapEntry.count
             end
 
             local info = UIDropDownMenu_CreateInfo()
-            info.text = string.format("%s  |cff888888(%d nodes)|r", continentName, totalNodes)
+            info.text = string.format("%s  |cff888888(%d %s)|r", continentName, totalCount, countLabel)
             info.notCheckable = true
             info.hasArrow = true
             info.menuList = continentName
             UIDropDownMenu_AddButton(info, level)
         end
 
-        -- Mapas sem continente
         if #noContinent > 0 then
             local info = UIDropDownMenu_CreateInfo()
             info.text = "Outros"
@@ -425,7 +802,7 @@ local function InitializeDropdown(self, level, menuList)
         if maps then
             for _, mapEntry in ipairs(maps) do
                 local info = UIDropDownMenu_CreateInfo()
-                info.text = string.format("%s (%d nodes)", mapEntry.name, mapEntry.nodeCount)
+                info.text = string.format("%s (%d %s)", mapEntry.name, mapEntry.count, countLabel)
                 info.value = mapEntry.mapID
                 info.notCheckable = true
                 if mapEntry.mapID == currentMapID then
@@ -444,16 +821,59 @@ end
 UIDropDownMenu_Initialize(dropdownFrame, InitializeDropdown)
 UIDropDownMenu_SetWidth(dropdownFrame, 350)
 
--- API Pública
-function FarmBuddyMapPreview:Show(importData)
-    if not importData or not importData.mapList or #importData.mapList == 0 then
-        print("|cffff0000[FarmBuddy]|r Nenhum mapa disponível para preview.")
-        return
-    end
+-- ============================
+-- API PÚBLICA
+-- ============================
 
-    currentImportData = importData
-    LoadMap(importData.mapList[1], importData)
-    frame:Show()
+function FarmBuddyMapPreview:Show(importData, mode)
+    mode = mode or "nodes"
+
+    if mode == "mobs" then
+        currentMode = "mobs"
+        UpdateModeUI()
+
+        -- Carregar settings do perfil
+        if FarmBuddyMobTracker then
+            local settings = FarmBuddyMobTracker:GetSettings()
+            if settings then
+                currentProfessionFilter = settings.professionFilter or "skinning"
+                currentDisplayMode = settings.displayMode or "icon"
+                displayToggle:SetChecked(currentDisplayMode == "portrait")
+
+                local labels = {
+                    skinning = "Couraria (Skinning)",
+                    tailoring = "Alfaiataria (Tailoring)",
+                    all = "Todos",
+                }
+                UIDropDownMenu_SetText(professionDropdown, labels[currentProfessionFilter] or "Todos")
+            end
+
+            currentImportData = FarmBuddyMobTracker:GetMobData(currentProfessionFilter)
+        end
+
+        if not currentImportData or not currentImportData.mapList or #currentImportData.mapList == 0 then
+            frame:Show()
+            HideAllPins()
+            HideAllTiles()
+            statusText:SetText("|cffff6600Nenhum mob disponível para exibição.|r")
+            return
+        end
+
+        LoadMap(currentImportData.mapList[1], currentImportData)
+        frame:Show()
+    else
+        -- Modo nodes (comportamento original)
+        if not importData or not importData.mapList or #importData.mapList == 0 then
+            print("|cffff0000[FarmBuddy]|r Nenhum mapa disponível para preview.")
+            return
+        end
+
+        currentMode = "nodes"
+        UpdateModeUI()
+        currentImportData = importData
+        LoadMap(importData.mapList[1], importData)
+        frame:Show()
+    end
 end
 
 function FarmBuddyMapPreview:Hide()

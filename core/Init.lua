@@ -98,6 +98,11 @@ eventFrame:SetScript("OnEvent", function(self, event, addonName)
             profile.gatherImports = {}
         end
 
+        -- Migração: inicializa mobTracking se não existir
+        if FarmBuddyMobTracker then
+            FarmBuddyMobTracker:InitProfile(profile)
+        end
+
         -- Restaura visibilidade do frame principal
         if profile.frameVisible and FarmTracker.frame then
             FarmTracker.frame:Show()
@@ -109,6 +114,14 @@ eventFrame:SetScript("OnEvent", function(self, event, addonName)
         self:RegisterEvent("PLAYER_LOGIN")
     elseif event == "PLAYER_LOGIN" then
         self:UnregisterEvent("PLAYER_LOGIN")
+
+        -- Inicia tracking de mobs se habilitado
+        if FarmBuddyMobTracker then
+            local profile = FarmTracker:GetProfile()
+            if profile.mobTracking and profile.mobTracking.settings.trackingEnabled then
+                FarmBuddyMobTracker:StartTracking()
+            end
+        end
 
         if not FarmBuddyGatherImport then
             return
