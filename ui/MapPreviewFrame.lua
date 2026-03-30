@@ -6,8 +6,8 @@ local MAP_HEIGHT = 668
 local FRAME_WIDTH = MAP_WIDTH + 40
 local FRAME_HEIGHT = MAP_HEIGHT + 90
 local PIN_SIZE = 8
-local MOB_PIN_SIZE = 16
-local MOB_PORTRAIT_SIZE = 24
+local MOB_PIN_SIZE = 12
+local MOB_PORTRAIT_SIZE = 18
 local MAX_TILES = 256
 
 -- Estado do modo atual
@@ -56,7 +56,22 @@ closeButton:SetScript("OnClick", function()
     frame:Hide()
 end)
 
--- Map Container
+-- Zoom / Pan state
+local MIN_ZOOM = 1.0
+local MAX_ZOOM = 5.0
+local ZOOM_STEP = 0.2
+local CLUSTER_EXPAND_ZOOM = 2.0
+local currentZoom = 1.0
+
+-- Forward declare para callback de re-render no zoom
+local OnZoomThresholdCrossed
+local panOffsetX = 0
+local panOffsetY = 0
+local isPanning = false
+local panStartX, panStartY = 0, 0
+local panStartOffsetX, panStartOffsetY = 0, 0
+
+-- Map Container (clip area)
 local mapContainer = CreateFrame("Frame", nil, frame)
 mapContainer:SetPoint("TOPLEFT", 20, -55)
 mapContainer:SetSize(MAP_WIDTH, MAP_HEIGHT)
@@ -66,19 +81,117 @@ local mapBg = mapContainer:CreateTexture(nil, "BACKGROUND")
 mapBg:SetAllPoints()
 mapBg:SetColorTexture(0.05, 0.05, 0.05, 1)
 
+-- ScrollChild — escala via SetScale, posição via SetPoint
+local scrollChild = CreateFrame("Frame", nil, mapContainer)
+scrollChild:SetSize(MAP_WIDTH, MAP_HEIGHT)
+scrollChild:SetPoint("CENTER", mapContainer, "CENTER")
+
 -- Map Texture Frame
-local mapTextureFrame = CreateFrame("Frame", nil, mapContainer)
+local mapTextureFrame = CreateFrame("Frame", nil, scrollChild)
 mapTextureFrame:SetAllPoints()
 
 -- Pin Container
-local pinContainer = CreateFrame("Frame", nil, mapContainer)
+local pinContainer = CreateFrame("Frame", nil, scrollChild)
 pinContainer:SetAllPoints()
 pinContainer:SetFrameLevel(mapTextureFrame:GetFrameLevel() + 10)
+pinContainer:SetClipsChildren(true)
+
+-- Clamp pan para não ultrapassar limites do mapa
+local function ClampPan()
+    local scaledW = scrollChild:GetWidth() * currentZoom
+    local scaledH = scrollChild:GetHeight() * currentZoom
+    local containerW = mapContainer:GetWidth()
+    local containerH = mapContainer:GetHeight()
+
+    local maxPanX = math.max(0, (scaledW - containerW) / 2)
+    local maxPanY = math.max(0, (scaledH - containerH) / 2)
+
+    panOffsetX = math.max(-maxPanX, math.min(maxPanX, panOffsetX))
+    panOffsetY = math.max(-maxPanY, math.min(maxPanY, panOffsetY))
+end
+
+-- Aplica zoom (SetScale) e pan (SetPoint offset)
+local function ApplyZoomPan()
+    scrollChild:SetScale(currentZoom)
+    ClampPan()
+    scrollChild:ClearAllPoints()
+    scrollChild:SetPoint("CENTER", mapContainer, "CENTER",
+        panOffsetX / currentZoom, panOffsetY / currentZoom)
+end
+
+-- Zoom com rodinha do mouse
+mapContainer:EnableMouseWheel(true)
+mapContainer:SetScript("OnMouseWheel", function(self, delta)
+    local oldZoom = currentZoom
+
+    if delta > 0 then
+        currentZoom = math.min(MAX_ZOOM, currentZoom + ZOOM_STEP)
+    else
+        currentZoom = math.max(MIN_ZOOM, currentZoom - ZOOM_STEP)
+    end
+
+    if currentZoom == oldZoom then return end
+
+    -- Ajustar pan proporcional ao zoom para manter foco no cursor
+    if oldZoom > MIN_ZOOM then
+        local ratio = currentZoom / oldZoom
+        panOffsetX = panOffsetX * ratio
+        panOffsetY = panOffsetY * ratio
+    end
+
+    ApplyZoomPan()
+
+    -- Re-renderizar pins se cruzou o threshold de cluster expandido
+    local wasExpanded = (oldZoom >= CLUSTER_EXPAND_ZOOM)
+    local isExpanded = (currentZoom >= CLUSTER_EXPAND_ZOOM)
+    if wasExpanded ~= isExpanded and OnZoomThresholdCrossed then
+        OnZoomThresholdCrossed()
+    end
+end)
+
+-- Pan com arrastar (botão direito)
+mapContainer:EnableMouse(true)
+mapContainer:SetScript("OnMouseDown", function(self, button)
+    if button == "RightButton" and currentZoom > MIN_ZOOM then
+        isPanning = true
+        local cx, cy = GetCursorPosition()
+        local scale = self:GetEffectiveScale()
+        panStartX = cx / scale
+        panStartY = cy / scale
+        panStartOffsetX = panOffsetX
+        panStartOffsetY = panOffsetY
+    end
+end)
+
+mapContainer:SetScript("OnMouseUp", function(self, button)
+    if button == "RightButton" then
+        isPanning = false
+    end
+end)
+
+mapContainer:SetScript("OnUpdate", function(self)
+    if not isPanning then return end
+
+    local cx, cy = GetCursorPosition()
+    local scale = self:GetEffectiveScale()
+    cx, cy = cx / scale, cy / scale
+
+    panOffsetX = panStartOffsetX + (cx - panStartX)
+    panOffsetY = panStartOffsetY - (cy - panStartY)
+
+    ClampPan()
+    scrollChild:ClearAllPoints()
+    scrollChild:SetPoint("CENTER", mapContainer, "CENTER",
+        panOffsetX / currentZoom, panOffsetY / currentZoom)
+end)
 
 -- Pools
+local overlayTextures = {}
 local tileTextures = {}
 local pinPool = {}
 local mobPinPool = {}
+local clusterPinPool = {}
+local expandedPinPool = {}
 local activePins = {}
 
 local currentImportData = nil
@@ -193,10 +306,17 @@ local function GetOrCreateMobPin(index)
     return pin
 end
 
+local function HideAllOverlays()
+    for _, tex in pairs(overlayTextures) do
+        tex:Hide()
+    end
+end
+
 local function HideAllTiles()
     for _, tex in pairs(tileTextures) do
         tex:Hide()
     end
+    HideAllOverlays()
 end
 
 local function HideAllPins()
@@ -204,6 +324,20 @@ local function HideAllPins()
         pin:Hide()
     end
     wipe(activePins)
+
+    -- Esconder todos os pins dos pools (garante limpeza entre modos)
+    for _, pin in pairs(pinPool) do
+        pin:Hide()
+    end
+    for _, pin in pairs(mobPinPool) do
+        pin:Hide()
+    end
+    for _, pin in pairs(clusterPinPool) do
+        pin:Hide()
+    end
+    for _, pin in pairs(expandedPinPool) do
+        pin:Hide()
+    end
 end
 
 -- Texto de erro/status
@@ -248,13 +382,22 @@ local function LoadMapTextures(mapID)
         displayWidth = MAP_HEIGHT * aspectRatio
     end
 
+    -- Reset zoom/pan e configurar scrollChild
+    currentZoom = 1.0
+    panOffsetX = 0
+    panOffsetY = 0
+    scrollChild:SetScale(1.0)
+    scrollChild:SetSize(displayWidth, displayHeight)
+    scrollChild:ClearAllPoints()
+    scrollChild:SetPoint("CENTER", mapContainer, "CENTER")
+
     mapTextureFrame:SetSize(displayWidth, displayHeight)
     mapTextureFrame:ClearAllPoints()
-    mapTextureFrame:SetPoint("CENTER", mapContainer, "CENTER")
+    mapTextureFrame:SetPoint("CENTER", scrollChild, "CENTER")
 
     pinContainer:SetSize(displayWidth, displayHeight)
     pinContainer:ClearAllPoints()
-    pinContainer:SetPoint("CENTER", mapContainer, "CENTER")
+    pinContainer:SetPoint("CENTER", scrollChild, "CENTER")
 
     local tilePixelW = layer.tileWidth or 256
     local tilePixelH = layer.tileHeight or 256
@@ -280,7 +423,47 @@ local function LoadMapTextures(mapID)
             (col - 1) * scaledTileW,
             -((row - 1) * scaledTileH))
         tile:SetSize(scaledTileW, scaledTileH)
+        tile:SetDesaturated(false)
+        tile:SetVertexColor(1, 1, 1, 1)
         tile:Show()
+    end
+
+    -- Renderiza texturas exploradas por cima dos tiles base
+    local okExplored, exploredTextures = pcall(C_MapExplorationInfo.GetExploredMapTextures, mapID)
+    if okExplored and exploredTextures then
+        local scaleX = displayWidth / totalWidth
+        local scaleY = displayHeight / totalHeight
+        local overlayIndex = 0
+
+        for _, info in ipairs(exploredTextures) do
+            local texW = info.textureWidth
+            local texH = info.textureHeight
+            local offX = info.offsetX
+            local offY = info.offsetY
+            local numOverlayCols = math.ceil(texW / 256)
+            local numOverlayRows = math.ceil(texH / 256)
+
+            for tIdx, fileID in ipairs(info.fileDataIDs) do
+                overlayIndex = overlayIndex + 1
+                local oRow = math.ceil(tIdx / numOverlayCols)
+                local oCol = tIdx - (oRow - 1) * numOverlayCols
+
+                local pieceW = math.min(256, texW - (oCol - 1) * 256)
+                local pieceH = math.min(256, texH - (oRow - 1) * 256)
+
+                if not overlayTextures[overlayIndex] then
+                    overlayTextures[overlayIndex] = mapTextureFrame:CreateTexture(nil, "ARTWORK", nil, 1)
+                end
+                local ot = overlayTextures[overlayIndex]
+                ot:SetTexture(fileID)
+                ot:ClearAllPoints()
+                ot:SetPoint("TOPLEFT", mapTextureFrame, "TOPLEFT",
+                    (offX + (oCol - 1) * 256) * scaleX,
+                    -((offY + (oRow - 1) * 256) * scaleY))
+                ot:SetSize(pieceW * scaleX, pieceH * scaleY)
+                ot:Show()
+            end
+        end
     end
 
     return true
@@ -336,8 +519,224 @@ end
 -- RENDERIZAÇÃO DE PINS (MOBS)
 -- ============================
 
+-- Distância em pixels para agrupar mobs próximos
+local CLUSTER_RADIUS = 40
+-- Limite para dispersão circular (acima disso, vira cluster com contador)
+local SCATTER_MAX = 3
+-- Raio da dispersão circular em pixels
+local SCATTER_RADIUS = 18
+-- Tamanho do portrait no cluster expandido
+local EXPANDED_PORTRAIT_SIZE = 14
+-- Espaçamento entre portraits no cluster expandido
+local EXPANDED_SPACING = 18
+
+-- Pool de cluster pins (número simples, sem zoom)
+local function GetOrCreateClusterPin(index)
+    if clusterPinPool[index] then
+        return clusterPinPool[index]
+    end
+
+    local pin = CreateFrame("Frame", nil, pinContainer)
+    pin:SetSize(28, 28)
+
+    -- Fundo escuro arredondado
+    local bg = pin:CreateTexture(nil, "BACKGROUND")
+    bg:SetTexture("Interface\\CHARACTERFRAME\\TempPortraitAlphaMask")
+    bg:SetAllPoints()
+    bg:SetVertexColor(0, 0, 0, 0.7)
+    pin.bg = bg
+
+    -- Texto do contador
+    local countText = pin:CreateFontString(nil, "OVERLAY", "GameFontNormalLarge")
+    countText:SetPoint("CENTER", 0, 0)
+    countText:SetTextColor(1, 0.82, 0)
+    pin.countText = countText
+
+    pin:EnableMouse(true)
+    pin:SetScript("OnEnter", function(self)
+        if self.tooltipText then
+            GameTooltip:SetOwner(self, "ANCHOR_RIGHT")
+            GameTooltip:AddLine(self.tooltipText)
+            if self.tooltipLines then
+                for _, line in ipairs(self.tooltipLines) do
+                    GameTooltip:AddLine(line, 0.8, 0.8, 0.8)
+                end
+            end
+            GameTooltip:Show()
+        end
+    end)
+    pin:SetScript("OnLeave", function()
+        GameTooltip:Hide()
+    end)
+
+    clusterPinPool[index] = pin
+    return pin
+end
+
+-- Pool de expanded cluster pins (portrait + badge de quantidade)
+
+local function GetOrCreateExpandedPin(index)
+    if expandedPinPool[index] then
+        return expandedPinPool[index]
+    end
+
+    local pin = CreateFrame("Frame", nil, pinContainer)
+    pin:SetSize(EXPANDED_PORTRAIT_SIZE, EXPANDED_PORTRAIT_SIZE)
+
+    -- Portrait
+    local portrait = pin:CreateTexture(nil, "ARTWORK")
+    portrait:SetAllPoints()
+    pin.portrait = portrait
+
+    -- Máscara circular
+    local mask = pin:CreateMaskTexture()
+    mask:SetTexture("Interface\\CHARACTERFRAME\\TempPortraitAlphaMask", "CLAMPTOBLACKADDITIVE", "CLAMPTOBLACKADDITIVE")
+    mask:SetAllPoints()
+    portrait:AddMaskTexture(mask)
+    pin.mask = mask
+
+    -- Borda circular
+    local border = pin:CreateTexture(nil, "OVERLAY")
+    border:SetTexture("Interface\\Minimap\\MiniMap-TrackingBorder")
+    border:SetSize(EXPANDED_PORTRAIT_SIZE + 10, EXPANDED_PORTRAIT_SIZE + 10)
+    border:SetPoint("CENTER")
+    pin.border = border
+
+    -- Ícone fallback
+    local icon = pin:CreateTexture(nil, "ARTWORK")
+    icon:SetAllPoints()
+    pin.icon = icon
+
+    local iconMask = pin:CreateMaskTexture()
+    iconMask:SetTexture("Interface\\CHARACTERFRAME\\TempPortraitAlphaMask", "CLAMPTOBLACKADDITIVE", "CLAMPTOBLACKADDITIVE")
+    iconMask:SetAllPoints()
+    icon:AddMaskTexture(iconMask)
+    pin.iconMask = iconMask
+
+    -- Número centralizado sobre o portrait
+    local badge = pin:CreateFontString(nil, "OVERLAY", "GameFontNormal")
+    badge:SetPoint("CENTER", pin, "CENTER", 0, 0)
+    badge:SetTextColor(1, 1, 1)
+    badge:SetFont(badge:GetFont(), 11, "OUTLINE")
+    pin.badge = badge
+
+    pin:EnableMouse(true)
+    pin:SetScript("OnEnter", function(self)
+        if self.tooltipText then
+            GameTooltip:SetOwner(self, "ANCHOR_RIGHT")
+            GameTooltip:AddLine(self.tooltipText)
+            if self.tooltipSubText then
+                GameTooltip:AddLine(self.tooltipSubText, 0.5, 0.5, 0.5)
+            end
+            GameTooltip:Show()
+        end
+    end)
+    pin:SetScript("OnLeave", function()
+        GameTooltip:Hide()
+    end)
+
+    expandedPinPool[index] = pin
+    return pin
+end
+
+-- Agrupa mobs filtrados por proximidade
+local function GroupMobsByProximity(mobs, filter, containerW, containerH)
+    local filtered = {}
+    for _, mob in ipairs(mobs) do
+        if FarmBuddyMobTracker:MatchesFilter(mob, filter) then
+            local px = (mob.x / 100) * containerW
+            local py = (mob.y / 100) * containerH
+            table.insert(filtered, { mob = mob, px = px, py = py, grouped = false })
+        end
+    end
+
+    local groups = {}
+    for i, entry in ipairs(filtered) do
+        if not entry.grouped then
+            local group = { entry }
+            entry.grouped = true
+            local cx, cy = entry.px, entry.py
+
+            for j = i + 1, #filtered do
+                local other = filtered[j]
+                if not other.grouped then
+                    local dx = other.px - cx
+                    local dy = other.py - cy
+                    if (dx * dx + dy * dy) <= (CLUSTER_RADIUS * CLUSTER_RADIUS) then
+                        other.grouped = true
+                        table.insert(group, other)
+                    end
+                end
+            end
+
+            table.insert(groups, group)
+        end
+    end
+
+    return groups
+end
+
+-- Configura um mob pin individual (portrait ou ícone)
+local function SetupMobPin(pin, mob, displayMode)
+    local displayID = mob.displayID
+    if not displayID and mob.npcID and FarmBuddyMobTracker then
+        displayID = FarmBuddyMobTracker:GetDisplayID(mob.npcID)
+    end
+
+    local showPortrait = false
+    if displayMode == "portrait" and displayID then
+        local retOk = pcall(SetPortraitTextureFromCreatureDisplayID, pin.portrait, displayID)
+        if retOk then
+            pin:SetSize(MOB_PORTRAIT_SIZE, MOB_PORTRAIT_SIZE)
+            pin.portrait:Show()
+            pin.icon:Hide()
+            pin.border:Show()
+            pin.border:SetSize(MOB_PORTRAIT_SIZE + 10, MOB_PORTRAIT_SIZE + 10)
+            showPortrait = true
+        end
+    end
+
+    if not showPortrait then
+        pin:SetSize(MOB_PIN_SIZE, MOB_PIN_SIZE)
+        pin.portrait:Hide()
+        pin.border:Hide()
+        pin.icon:Show()
+
+        local iconTexture = mobTypeIcons[mob.creatureType] or mobTypeIcons["Beast"]
+        pin.icon:SetTexture(iconTexture)
+        pin.icon:SetTexCoord(0.08, 0.92, 0.08, 0.92)
+    end
+
+    -- Tooltip
+    local typePT = FarmBuddyMobTracker.creatureTypePT[mob.creatureType] or mob.creatureType
+    local profLabel = ""
+    if mob.skinnable then
+        profLabel = "|cffcc6600Couraria|r"
+    elseif mob.clothDropper then
+        profLabel = "|cff9933ccAlfaiataria|r"
+    end
+
+    pin.tooltipText = mob.name or "Mob"
+    pin.tooltipSubText = typePT .. (profLabel ~= "" and ("  -  " .. profLabel) or "")
+
+    if mob.trackedAt then
+        pin.tooltipSubText = pin.tooltipSubText .. "\n|cff00ff00Rastreado|r"
+    end
+end
+
+-- Calcula posições em dispersão circular
+local function GetScatterOffset(index, total)
+    local angle = (2 * math.pi / total) * (index - 1) - (math.pi / 2)
+    return math.cos(angle) * SCATTER_RADIUS, math.sin(angle) * SCATTER_RADIUS
+end
+
+local clusterPinIndex = 0
+local expandedPinIndex = 0
+
 local function RenderMobPins(mapID, mobData, filter, displayMode)
     HideAllPins()
+    clusterPinIndex = 0
+    expandedPinIndex = 0
 
     if not mobData or not mobData.mobs or not mobData.mobs[mapID] then
         return
@@ -346,70 +745,163 @@ local function RenderMobPins(mapID, mobData, filter, displayMode)
     local mobs = mobData.mobs[mapID]
     local containerW = pinContainer:GetWidth()
     local containerH = pinContainer:GetHeight()
+
+    local groups = GroupMobsByProximity(mobs, filter, containerW, containerH)
     local pinIndex = 0
 
-    for _, mob in ipairs(mobs) do
-        if FarmBuddyMobTracker:MatchesFilter(mob, filter) then
+    for _, group in ipairs(groups) do
+        -- Centro do grupo
+        local cx, cy = 0, 0
+        for _, entry in ipairs(group) do
+            cx = cx + entry.px
+            cy = cy + entry.py
+        end
+        cx = cx / #group
+        cy = cy / #group
+
+        if #group == 1 then
+            -- Mob solo: renderizar normalmente
             pinIndex = pinIndex + 1
             local pin = GetOrCreateMobPin(pinIndex)
-            local px = (mob.x / 100) * containerW
-            local py = (mob.y / 100) * containerH
-
             pin:ClearAllPoints()
-            pin:SetPoint("CENTER", pinContainer, "TOPLEFT", px, -py)
-
-            -- Buscar displayID: do mob tracked ou da tabela de lookup
-            local displayID = mob.displayID
-            if not displayID and mob.npcID and FarmBuddyMobTracker then
-                displayID = FarmBuddyMobTracker:GetDisplayID(mob.npcID)
-            end
-
-            local showPortrait = false
-            if displayMode == "portrait" and displayID then
-                -- Modo retrato: tenta renderizar, fallback se falhar
-                local retOk = pcall(SetPortraitTextureFromCreatureDisplayID, pin.portrait, displayID)
-                if retOk then
-                    pin:SetSize(MOB_PORTRAIT_SIZE, MOB_PORTRAIT_SIZE)
-                    pin.portrait:Show()
-                    pin.icon:Hide()
-                    pin.border:Show()
-                    pin.border:SetSize(MOB_PORTRAIT_SIZE + 10, MOB_PORTRAIT_SIZE + 10)
-                    showPortrait = true
-                end
-            end
-
-            if not showPortrait then
-                -- Modo ícone (ou fallback se sem displayID / portrait falhou)
-                pin:SetSize(MOB_PIN_SIZE, MOB_PIN_SIZE)
-                pin.portrait:Hide()
-                pin.border:Hide()
-                pin.icon:Show()
-
-                local iconTexture = mobTypeIcons[mob.creatureType] or mobTypeIcons["Beast"]
-                pin.icon:SetTexture(iconTexture)
-                pin.icon:SetTexCoord(0.08, 0.92, 0.08, 0.92) -- recorta bordas do ícone
-            end
-
-            -- Tooltip
-            local typePT = FarmBuddyMobTracker.creatureTypePT[mob.creatureType] or mob.creatureType
-            local profLabel = ""
-            if mob.skinnable then
-                profLabel = "|cffcc6600Couraria|r"
-            elseif mob.clothDropper then
-                profLabel = "|cff9933ccAlfaiataria|r"
-            end
-
-            pin.tooltipText = mob.name or "Mob"
-            pin.tooltipSubText = typePT .. (profLabel ~= "" and ("  -  " .. profLabel) or "")
-
-            -- Indicador visual de mob tracked (não hardcoded)
-            if mob.trackedAt then
-                pin.tooltipSubText = pin.tooltipSubText .. "\n|cff00ff00Rastreado|r"
-            end
-
+            pin:SetPoint("CENTER", pinContainer, "TOPLEFT", group[1].px, -group[1].py)
+            SetupMobPin(pin, group[1].mob, displayMode)
             pin:Show()
             table.insert(activePins, pin)
+
+        elseif #group <= SCATTER_MAX then
+            -- Dispersão circular: espalhar em volta do centro
+            for i, entry in ipairs(group) do
+                pinIndex = pinIndex + 1
+                local pin = GetOrCreateMobPin(pinIndex)
+                local offX, offY = GetScatterOffset(i, #group)
+                pin:ClearAllPoints()
+                pin:SetPoint("CENTER", pinContainer, "TOPLEFT", cx + offX, -(cy + offY))
+                SetupMobPin(pin, entry.mob, displayMode)
+                pin:Show()
+                table.insert(activePins, pin)
+            end
+
+        elseif currentZoom >= CLUSTER_EXPAND_ZOOM then
+            -- Cluster expandido: agrupar por mob único e mostrar portrait + badge
+            local uniqueMobs = {}
+            local uniqueOrder = {}
+            for _, entry in ipairs(group) do
+                local key = entry.mob.name or tostring(entry.mob.npcID)
+                if not uniqueMobs[key] then
+                    uniqueMobs[key] = { mob = entry.mob, count = 0 }
+                    table.insert(uniqueOrder, key)
+                end
+                uniqueMobs[key].count = uniqueMobs[key].count + 1
+            end
+
+            -- Calcular layout: grid com máximo 2 colunas, centrada
+            local total = #uniqueOrder
+            local cols = math.min(total, 2)
+            local rows = math.ceil(total / cols)
+            local startX = cx - ((cols - 1) * EXPANDED_SPACING) / 2
+            local startY = cy - ((rows - 1) * EXPANDED_SPACING) / 2
+
+            for idx, key in ipairs(uniqueOrder) do
+                local data = uniqueMobs[key]
+                expandedPinIndex = expandedPinIndex + 1
+                local epin = GetOrCreateExpandedPin(expandedPinIndex)
+
+                local col = ((idx - 1) % cols)
+                local row = math.floor((idx - 1) / cols)
+                local ex = startX + col * EXPANDED_SPACING
+                local ey = startY + row * EXPANDED_SPACING
+
+                epin:ClearAllPoints()
+                epin:SetPoint("CENTER", pinContainer, "TOPLEFT", ex, -ey)
+
+                -- Configurar portrait ou ícone
+                local displayID = data.mob.displayID
+                if not displayID and data.mob.npcID and FarmBuddyMobTracker then
+                    displayID = FarmBuddyMobTracker:GetDisplayID(data.mob.npcID)
+                end
+
+                local showPortrait = false
+                if displayID then
+                    local retOk = pcall(SetPortraitTextureFromCreatureDisplayID, epin.portrait, displayID)
+                    if retOk then
+                        epin.portrait:Show()
+                        epin.icon:Hide()
+                        epin.border:Show()
+                        showPortrait = true
+                    end
+                end
+
+                if not showPortrait then
+                    epin.portrait:Hide()
+                    epin.border:Hide()
+                    epin.icon:Show()
+                    local iconTexture = mobTypeIcons[data.mob.creatureType] or mobTypeIcons["Beast"]
+                    epin.icon:SetTexture(iconTexture)
+                    epin.icon:SetTexCoord(0.08, 0.92, 0.08, 0.92)
+                end
+
+                -- Badge de contagem
+                epin.badge:SetText(tostring(data.count))
+                epin.badge:Show()
+
+                -- Tooltip
+                local typePT = FarmBuddyMobTracker.creatureTypePT[data.mob.creatureType] or data.mob.creatureType
+                local profLabel = ""
+                if data.mob.skinnable then
+                    profLabel = "|cffcc6600Couraria|r"
+                elseif data.mob.clothDropper then
+                    profLabel = "|cff9933ccAlfaiataria|r"
+                end
+                epin.tooltipText = string.format("%s  x%d", data.mob.name or "Mob", data.count)
+                epin.tooltipSubText = typePT .. (profLabel ~= "" and ("  -  " .. profLabel) or "")
+
+                epin:Show()
+                table.insert(activePins, epin)
+            end
+
+        else
+            -- Cluster com contador (sem zoom)
+            clusterPinIndex = clusterPinIndex + 1
+            local cpin = GetOrCreateClusterPin(clusterPinIndex)
+            cpin:ClearAllPoints()
+            cpin:SetPoint("CENTER", pinContainer, "TOPLEFT", cx, -cy)
+            cpin.countText:SetText(tostring(#group))
+
+            -- Tooltip com lista de mobs
+            cpin.tooltipText = string.format("|cffffd700%d mobs neste ponto|r", #group)
+            cpin.tooltipLines = {}
+            local tooltipCounts = {}
+            local tooltipOrder = {}
+            for _, entry in ipairs(group) do
+                local name = entry.mob.name or "Mob"
+                if not tooltipCounts[name] then
+                    tooltipCounts[name] = { count = 0, mob = entry.mob }
+                    table.insert(tooltipOrder, name)
+                end
+                tooltipCounts[name].count = tooltipCounts[name].count + 1
+            end
+            for _, name in ipairs(tooltipOrder) do
+                local info = tooltipCounts[name]
+                local profTag = ""
+                if info.mob.skinnable then
+                    profTag = " |cffcc6600[S]|r"
+                elseif info.mob.clothDropper then
+                    profTag = " |cff9933cc[T]|r"
+                end
+                table.insert(cpin.tooltipLines, string.format("%s x%d%s", name, info.count, profTag))
+            end
+
+            cpin:Show()
+            table.insert(activePins, cpin)
         end
+    end
+end
+
+-- Callback para re-renderizar pins quando zoom cruza threshold
+OnZoomThresholdCrossed = function()
+    if currentMode == "mobs" and currentMapID and currentImportData then
+        RenderMobPins(currentMapID, currentImportData, currentProfessionFilter, currentDisplayMode)
     end
 end
 

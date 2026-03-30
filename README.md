@@ -16,6 +16,9 @@ Addon de World of Warcraft para rastrear sessões de farm, capturar loot automat
 - **Mapa de Mobs** — Visualização de mobs farmáveis no mapa com filtros por profissão (Skinning/Tailoring)
 - **Portraits de mobs** — Retrato real dos mobs no mapa via tabela de displayIDs, com fallback de ícone por tipo
 - **Tracking em tempo real** — Registro automático de mobs via nameplate e mouseover
+- **Zoom e Pan** — Zoom com scroll do mouse e pan com botão direito no mapa
+- **Clustering inteligente** — Mobs próximos agrupados com contador; ao dar zoom, expandem em portraits com quantidade
+- **Overlay de exploração** — Mapas renderizados com texturas exploradas para visualização completa
 
 ## Comandos
 
@@ -29,6 +32,15 @@ World of Warcraft/_retail_/Interface/AddOns/FarmBuddy
 ```
 
 ## Changelog
+
+### v1.3.0
+- **Zoom e pan no mapa** — Scroll do mouse para zoom (1x-5x), botão direito para arrastar
+- **Clustering inteligente de mobs** — Mobs próximos agrupados com contador; zoom 2x+ expande em portraits únicos com quantidade
+- **Overlay de exploração** — Mapas renderizam com texturas exploradas via `C_MapExplorationInfo`
+- **+120 mobs** adicionados à tabela de displayIDs (Eversong Woods, Zul'Aman, Harandar, Voidstorm)
+- Correção de clipping de portraits fora da área do mapa
+- Correção de pins misturados entre modos ícone/portrait
+- DisplayID `0` tratado como pendente (fallback para ícone genérico)
 
 ### v1.2.0
 - Novo sistema de **mob tracking** em tempo real (nameplate + mouseover)
@@ -45,12 +57,3 @@ World of Warcraft/_retail_/Interface/AddOns/FarmBuddy
 - **Exportação** de dados de gathering em formato comprimido
 - Auto-detecção do GatherMate2 instalado
 - Dropdown de zonas agrupado por continente
-
-### v1.0.0
-- Rastreamento de sessões de farm (start/stop/pause)
-- Captura automática de loot com filtros por categoria
-- Histórico de sessões com detalhamento de itens
-- Estimativa de lucro via TSM / Auctionator
-- Profiles por personagem com migração automática
-- Ícone no minimapa
-- Itens soulbound ignorados no cálculo de valor

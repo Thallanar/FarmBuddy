@@ -212,8 +212,9 @@ local function ExtractMobInfo(unitToken)
     local skinnable = (creatureType == "Beast") or (creatureType == "Dragonkin")
     local clothDropper = (creatureType == "Humanoid")
 
-    -- Buscar displayID na tabela de lookup
-    local displayID = displayIDLookup[npcID] or nil
+    -- Buscar displayID na tabela de lookup (0 = pendente, tratar como nil)
+    local displayID = displayIDLookup[npcID]
+    if displayID == 0 then displayID = nil end
 
     return {
         npcID = npcID,
@@ -331,5 +332,7 @@ end
 
 -- Consulta displayID pela tabela de lookup (para mobs já tracked sem displayID)
 function FarmBuddyMobTracker:GetDisplayID(npcID)
-    return displayIDLookup[npcID]
+    local id = displayIDLookup[npcID]
+    if id == 0 then return nil end
+    return id
 end
