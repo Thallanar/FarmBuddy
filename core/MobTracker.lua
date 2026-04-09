@@ -73,6 +73,12 @@ end
 -- ============================
 
 function FarmBuddyMobTracker:MatchesFilter(mobEntry, filter)
+    -- Gate global: só aceita mobs cujo npcID esteja na tabela de DisplayIDs.
+    -- Qualquer mob fora dessa lista é ignorado no mapa.
+    if not mobEntry.npcID or not displayIDLookup[mobEntry.npcID] then
+        return false
+    end
+
     if not filter or filter == "all" then
         return true
     end

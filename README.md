@@ -17,7 +17,9 @@ Addon de World of Warcraft para rastrear sessões de farm, capturar loot automat
 - **Portraits de mobs** — Retrato real dos mobs no mapa via tabela de displayIDs, com fallback de ícone por tipo
 - **Tracking em tempo real** — Registro automático de mobs via nameplate e mouseover
 - **Zoom e Pan** — Zoom com scroll do mouse e pan com botão direito no mapa
-- **Clustering inteligente** — Mobs próximos agrupados com contador; ao dar zoom, expandem em portraits com quantidade
+- **Agrupamento por espécie** — 1 pin por mob único no centróide dos spawns, com sidebar listando todos os mobs da zona
+- **Seleção múltipla de mobs** — Clique na sidebar para isolar um ou vários mobs e ver todos os spawns individuais
+- **Abre na zona do jogador** — Ao abrir o mapa, a zona atual do personagem é selecionada automaticamente (se registrada)
 - **Overlay de exploração** — Mapas renderizados com texturas exploradas para visualização completa
 
 ## Comandos
@@ -32,6 +34,15 @@ World of Warcraft/_retail_/Interface/AddOns/FarmBuddy
 ```
 
 ## Changelog
+
+### v1.3.1
+- **Agrupamento por espécie** — Mapa mostra 1 pin por mob único no centróide dos spawns, reduzindo drasticamente a poluição visual
+- **Sidebar de mobs** — Lista lateral com todos os mobs da zona (portrait + nome + count) ordenados por contagem
+- **Seleção múltipla para isolar** — Clique em várias rows da sidebar para ver todos os spawns individuais dos mobs escolhidos; botão "Limpar seleção" para resetar
+- **Abre na zona do jogador** — Ao abrir o Mob Map, a zona atual do personagem é selecionada automaticamente se estiver registrada
+- **Filtro por DisplayIDs registrados** — Apenas mobs com `npcID` na tabela de DisplayIDs são exibidos no mapa
+- **Remoção da borda dourada bugada** dos mob pins
+- **Limpeza grande:** removidos o modo detalhado (clustering por proximidade), dispersão circular, cluster pins e lógica de re-render por zoom threshold
 
 ### v1.3.0
 - **Zoom e pan no mapa** — Scroll do mouse para zoom (1x-5x), botão direito para arrastar
@@ -50,10 +61,3 @@ World of Warcraft/_retail_/Interface/AddOns/FarmBuddy
 - Toggle portrait/ícone no mapa
 - Botão de acesso ao mapa de mobs na janela principal
 - Agrupamento de mapas por continente no dropdown de zonas
-
-### v1.1.0
-- **Import Manager** para dados do GatherMate2
-- **Preview de mapa** com texturas reais do jogo e pins de nodes
-- **Exportação** de dados de gathering em formato comprimido
-- Auto-detecção do GatherMate2 instalado
-- Dropdown de zonas agrupado por continente

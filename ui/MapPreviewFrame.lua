@@ -10,10 +10,19 @@ local MOB_PIN_SIZE = 12
 local MOB_PORTRAIT_SIZE = 18
 local MAX_TILES = 256
 
+-- Sidebar (lista de mobs únicos)
+local SIDEBAR_WIDTH = 200
+local SIDEBAR_ROW_HEIGHT = 28
+
 -- Estado do modo atual
 local currentMode = "nodes"         -- "nodes" | "mobs"
 local currentProfessionFilter = "skinning"
 local currentDisplayMode = "icon"   -- "icon" | "portrait"
+local selectedNpcIDs = {}           -- set de npcIDs isolados (npcID -> true)
+local selectedCount = 0
+
+-- Forward declare (definido mais abaixo, usado pelos handlers da sidebar)
+local RenderMobPinsDispatch
 
 local frame = CreateFrame("Frame", "FarmBuddyMapPreviewFrame", UIParent, BackdropTemplateMixin and "BackdropTemplate")
 frame:SetSize(FRAME_WIDTH, FRAME_HEIGHT)
@@ -32,6 +41,69 @@ frame:SetScript("OnDragStop", frame.StopMovingOrSizing)
 frame:SetFrameStrata("FULLSCREEN_DIALOG")
 frame:SetToplevel(true)
 frame:Hide()
+
+-- Sidebar (lista de mobs únicos) — attached à direita do frame principal
+local sidebar = CreateFrame("Frame", nil, frame, BackdropTemplateMixin and "BackdropTemplate")
+sidebar:SetSize(SIDEBAR_WIDTH, FRAME_HEIGHT)
+sidebar:SetPoint("TOPLEFT", frame, "TOPRIGHT", -4, 0)
+sidebar:SetBackdrop({
+    bgFile = "Interface\\DialogFrame\\UI-DialogBox-Background",
+    edgeFile = "Interface\\DialogFrame\\UI-DialogBox-Border",
+    tile = true, tileSize = 32, edgeSize = 32,
+    insets = { left = 11, right = 12, top = 12, bottom = 11 }
+})
+sidebar:Hide()
+
+local sidebarTitle = sidebar:CreateFontString(nil, "OVERLAY", "GameFontNormal")
+sidebarTitle:SetPoint("TOP", sidebar, "TOP", 0, -14)
+sidebarTitle:SetText("Mobs nesta zona")
+
+local sidebarHelp = sidebar:CreateFontString(nil, "OVERLAY", "GameFontDisableSmall")
+sidebarHelp:SetPoint("TOP", sidebarTitle, "BOTTOM", 0, -2)
+sidebarHelp:SetText("Clique para isolar (multi)")
+
+-- Botão "Limpar seleção" (visível só quando há algo selecionado)
+local sidebarClearBtn = CreateFrame("Button", nil, sidebar)
+sidebarClearBtn:SetSize(SIDEBAR_WIDTH - 28, 18)
+sidebarClearBtn:SetPoint("TOP", sidebarHelp, "BOTTOM", 0, -2)
+local sidebarClearText = sidebarClearBtn:CreateFontString(nil, "OVERLAY", "GameFontNormalSmall")
+sidebarClearText:SetAllPoints()
+sidebarClearText:SetTextColor(1, 0.82, 0)
+sidebarClearBtn:SetFontString(sidebarClearText)
+sidebarClearBtn:Hide()
+
+local sidebarScroll = CreateFrame("ScrollFrame", nil, sidebar, "UIPanelScrollFrameTemplate")
+sidebarScroll:SetPoint("TOPLEFT", 14, -68)
+sidebarScroll:SetPoint("BOTTOMRIGHT", -30, 14)
+
+local sidebarContent = CreateFrame("Frame", nil, sidebarScroll)
+sidebarContent:SetSize(SIDEBAR_WIDTH - 44, 1)
+sidebarScroll:SetScrollChild(sidebarContent)
+
+local sidebarRowPool = {}
+
+-- Atualiza o texto/visibilidade do botão "Limpar seleção"
+local function UpdateSidebarHeader()
+    if selectedCount > 0 then
+        sidebarClearText:SetText(string.format("Limpar seleção (%d)", selectedCount))
+        sidebarClearBtn:Show()
+    else
+        sidebarClearBtn:Hide()
+    end
+end
+
+sidebarClearBtn:SetScript("OnClick", function()
+    wipe(selectedNpcIDs)
+    selectedCount = 0
+    for _, r in pairs(sidebarRowPool) do
+        r.isSelected = false
+        r.highlight:Hide()
+    end
+    UpdateSidebarHeader()
+    if currentMode == "mobs" and currentMapID and currentImportData then
+        RenderMobPinsDispatch(currentMapID, currentImportData, currentProfessionFilter, currentDisplayMode)
+    end
+end)
 
 -- Title Bar
 local titleBar = CreateFrame("Frame", nil, frame)
@@ -60,11 +132,8 @@ end)
 local MIN_ZOOM = 1.0
 local MAX_ZOOM = 5.0
 local ZOOM_STEP = 0.2
-local CLUSTER_EXPAND_ZOOM = 2.0
 local currentZoom = 1.0
 
--- Forward declare para callback de re-render no zoom
-local OnZoomThresholdCrossed
 local panOffsetX = 0
 local panOffsetY = 0
 local isPanning = false
@@ -140,13 +209,6 @@ mapContainer:SetScript("OnMouseWheel", function(self, delta)
     end
 
     ApplyZoomPan()
-
-    -- Re-renderizar pins se cruzou o threshold de cluster expandido
-    local wasExpanded = (oldZoom >= CLUSTER_EXPAND_ZOOM)
-    local isExpanded = (currentZoom >= CLUSTER_EXPAND_ZOOM)
-    if wasExpanded ~= isExpanded and OnZoomThresholdCrossed then
-        OnZoomThresholdCrossed()
-    end
 end)
 
 -- Pan com arrastar (botão direito)
@@ -190,7 +252,6 @@ local overlayTextures = {}
 local tileTextures = {}
 local pinPool = {}
 local mobPinPool = {}
-local clusterPinPool = {}
 local expandedPinPool = {}
 local activePins = {}
 
@@ -268,13 +329,6 @@ local function GetOrCreateMobPin(index)
     portrait:AddMaskTexture(mask)
     pin.mask = mask
 
-    -- Borda circular dourada
-    local border = pin:CreateTexture(nil, "OVERLAY")
-    border:SetTexture("Interface\\Minimap\\MiniMap-TrackingBorder")
-    border:SetSize(MOB_PORTRAIT_SIZE + 10, MOB_PORTRAIT_SIZE + 10)
-    border:SetPoint("CENTER")
-    pin.border = border
-
     -- Ícone (para modo ícone)
     local icon = pin:CreateTexture(nil, "ARTWORK")
     icon:SetAllPoints()
@@ -330,9 +384,6 @@ local function HideAllPins()
         pin:Hide()
     end
     for _, pin in pairs(mobPinPool) do
-        pin:Hide()
-    end
-    for _, pin in pairs(clusterPinPool) do
         pin:Hide()
     end
     for _, pin in pairs(expandedPinPool) do
@@ -519,62 +570,10 @@ end
 -- RENDERIZAÇÃO DE PINS (MOBS)
 -- ============================
 
--- Distância em pixels para agrupar mobs próximos
-local CLUSTER_RADIUS = 40
--- Limite para dispersão circular (acima disso, vira cluster com contador)
-local SCATTER_MAX = 3
--- Raio da dispersão circular em pixels
-local SCATTER_RADIUS = 18
--- Tamanho do portrait no cluster expandido
+-- Tamanho do portrait no pin agrupado
 local EXPANDED_PORTRAIT_SIZE = 14
--- Espaçamento entre portraits no cluster expandido
-local EXPANDED_SPACING = 18
 
--- Pool de cluster pins (número simples, sem zoom)
-local function GetOrCreateClusterPin(index)
-    if clusterPinPool[index] then
-        return clusterPinPool[index]
-    end
-
-    local pin = CreateFrame("Frame", nil, pinContainer)
-    pin:SetSize(28, 28)
-
-    -- Fundo escuro arredondado
-    local bg = pin:CreateTexture(nil, "BACKGROUND")
-    bg:SetTexture("Interface\\CHARACTERFRAME\\TempPortraitAlphaMask")
-    bg:SetAllPoints()
-    bg:SetVertexColor(0, 0, 0, 0.7)
-    pin.bg = bg
-
-    -- Texto do contador
-    local countText = pin:CreateFontString(nil, "OVERLAY", "GameFontNormalLarge")
-    countText:SetPoint("CENTER", 0, 0)
-    countText:SetTextColor(1, 0.82, 0)
-    pin.countText = countText
-
-    pin:EnableMouse(true)
-    pin:SetScript("OnEnter", function(self)
-        if self.tooltipText then
-            GameTooltip:SetOwner(self, "ANCHOR_RIGHT")
-            GameTooltip:AddLine(self.tooltipText)
-            if self.tooltipLines then
-                for _, line in ipairs(self.tooltipLines) do
-                    GameTooltip:AddLine(line, 0.8, 0.8, 0.8)
-                end
-            end
-            GameTooltip:Show()
-        end
-    end)
-    pin:SetScript("OnLeave", function()
-        GameTooltip:Hide()
-    end)
-
-    clusterPinPool[index] = pin
-    return pin
-end
-
--- Pool de expanded cluster pins (portrait + badge de quantidade)
-
+-- Pool de expanded pins (portrait + badge de quantidade)
 local function GetOrCreateExpandedPin(index)
     if expandedPinPool[index] then
         return expandedPinPool[index]
@@ -594,13 +593,6 @@ local function GetOrCreateExpandedPin(index)
     mask:SetAllPoints()
     portrait:AddMaskTexture(mask)
     pin.mask = mask
-
-    -- Borda circular
-    local border = pin:CreateTexture(nil, "OVERLAY")
-    border:SetTexture("Interface\\Minimap\\MiniMap-TrackingBorder")
-    border:SetSize(EXPANDED_PORTRAIT_SIZE + 10, EXPANDED_PORTRAIT_SIZE + 10)
-    border:SetPoint("CENTER")
-    pin.border = border
 
     -- Ícone fallback
     local icon = pin:CreateTexture(nil, "ARTWORK")
@@ -639,43 +631,6 @@ local function GetOrCreateExpandedPin(index)
     return pin
 end
 
--- Agrupa mobs filtrados por proximidade
-local function GroupMobsByProximity(mobs, filter, containerW, containerH)
-    local filtered = {}
-    for _, mob in ipairs(mobs) do
-        if FarmBuddyMobTracker:MatchesFilter(mob, filter) then
-            local px = (mob.x / 100) * containerW
-            local py = (mob.y / 100) * containerH
-            table.insert(filtered, { mob = mob, px = px, py = py, grouped = false })
-        end
-    end
-
-    local groups = {}
-    for i, entry in ipairs(filtered) do
-        if not entry.grouped then
-            local group = { entry }
-            entry.grouped = true
-            local cx, cy = entry.px, entry.py
-
-            for j = i + 1, #filtered do
-                local other = filtered[j]
-                if not other.grouped then
-                    local dx = other.px - cx
-                    local dy = other.py - cy
-                    if (dx * dx + dy * dy) <= (CLUSTER_RADIUS * CLUSTER_RADIUS) then
-                        other.grouped = true
-                        table.insert(group, other)
-                    end
-                end
-            end
-
-            table.insert(groups, group)
-        end
-    end
-
-    return groups
-end
-
 -- Configura um mob pin individual (portrait ou ícone)
 local function SetupMobPin(pin, mob, displayMode)
     local displayID = mob.displayID
@@ -690,8 +645,6 @@ local function SetupMobPin(pin, mob, displayMode)
             pin:SetSize(MOB_PORTRAIT_SIZE, MOB_PORTRAIT_SIZE)
             pin.portrait:Show()
             pin.icon:Hide()
-            pin.border:Show()
-            pin.border:SetSize(MOB_PORTRAIT_SIZE + 10, MOB_PORTRAIT_SIZE + 10)
             showPortrait = true
         end
     end
@@ -699,7 +652,6 @@ local function SetupMobPin(pin, mob, displayMode)
     if not showPortrait then
         pin:SetSize(MOB_PIN_SIZE, MOB_PIN_SIZE)
         pin.portrait:Hide()
-        pin.border:Hide()
         pin.icon:Show()
 
         local iconTexture = mobTypeIcons[mob.creatureType] or mobTypeIcons["Beast"]
@@ -724,18 +676,162 @@ local function SetupMobPin(pin, mob, displayMode)
     end
 end
 
--- Calcula posições em dispersão circular
-local function GetScatterOffset(index, total)
-    local angle = (2 * math.pi / total) * (index - 1) - (math.pi / 2)
-    return math.cos(angle) * SCATTER_RADIUS, math.sin(angle) * SCATTER_RADIUS
-end
-
-local clusterPinIndex = 0
 local expandedPinIndex = 0
 
-local function RenderMobPins(mapID, mobData, filter, displayMode)
+-- ============================
+-- SIDEBAR DE MOBS ÚNICOS
+-- ============================
+
+local function GetOrCreateSidebarRow(index)
+    if sidebarRowPool[index] then
+        return sidebarRowPool[index]
+    end
+
+    local row = CreateFrame("Button", nil, sidebarContent)
+    row:SetSize(sidebarContent:GetWidth(), SIDEBAR_ROW_HEIGHT - 2)
+
+    local hl = row:CreateTexture(nil, "BACKGROUND")
+    hl:SetAllPoints()
+    hl:SetColorTexture(1, 0.82, 0, 0.18)
+    hl:Hide()
+    row.highlight = hl
+
+    local portrait = row:CreateTexture(nil, "ARTWORK")
+    portrait:SetSize(22, 22)
+    portrait:SetPoint("LEFT", 2, 0)
+    row.portrait = portrait
+
+    local pmask = row:CreateMaskTexture()
+    pmask:SetTexture("Interface\\CHARACTERFRAME\\TempPortraitAlphaMask", "CLAMPTOBLACKADDITIVE", "CLAMPTOBLACKADDITIVE")
+    pmask:SetAllPoints(portrait)
+    portrait:AddMaskTexture(pmask)
+
+    local name = row:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
+    name:SetPoint("LEFT", portrait, "RIGHT", 4, 0)
+    name:SetPoint("RIGHT", row, "RIGHT", -28, 0)
+    name:SetJustifyH("LEFT")
+    name:SetWordWrap(false)
+    row.nameText = name
+
+    local count = row:CreateFontString(nil, "OVERLAY", "GameFontNormalSmall")
+    count:SetPoint("RIGHT", row, "RIGHT", -4, 0)
+    count:SetTextColor(1, 0.82, 0)
+    row.countText = count
+
+    row:SetScript("OnEnter", function(self)
+        if not self.isSelected then
+            self.highlight:SetColorTexture(1, 1, 1, 0.1)
+            self.highlight:Show()
+        end
+    end)
+    row:SetScript("OnLeave", function(self)
+        if not self.isSelected then
+            self.highlight:Hide()
+        end
+    end)
+
+    row:SetScript("OnClick", function(self)
+        if not self.npcID then return end
+        if selectedNpcIDs[self.npcID] then
+            selectedNpcIDs[self.npcID] = nil
+            selectedCount = selectedCount - 1
+        else
+            selectedNpcIDs[self.npcID] = true
+            selectedCount = selectedCount + 1
+        end
+        -- Re-render pins e re-aplica highlights
+        if currentMode == "mobs" and currentMapID and currentImportData then
+            RenderMobPinsDispatch(currentMapID, currentImportData, currentProfessionFilter, currentDisplayMode)
+        end
+        for _, r in pairs(sidebarRowPool) do
+            r.isSelected = (r.npcID ~= nil and selectedNpcIDs[r.npcID] == true)
+            if r.isSelected then
+                r.highlight:SetColorTexture(1, 0.82, 0, 0.28)
+                r.highlight:Show()
+            else
+                r.highlight:Hide()
+            end
+        end
+        UpdateSidebarHeader()
+    end)
+
+    sidebarRowPool[index] = row
+    return row
+end
+
+local function UpdateSidebar(mapID, mobData, filter)
+    -- Esconde todas as rows primeiro
+    for _, row in pairs(sidebarRowPool) do
+        row:Hide()
+        row.isSelected = false
+        row.highlight:Hide()
+    end
+
+    if not mobData or not mobData.mobs or not mobData.mobs[mapID] then
+        sidebarContent:SetHeight(1)
+        return
+    end
+
+    -- Agrupa por npcID
+    local unique = {}
+    local order = {}
+    for _, mob in ipairs(mobData.mobs[mapID]) do
+        if FarmBuddyMobTracker:MatchesFilter(mob, filter) then
+            local key = mob.npcID or mob.name or "?"
+            if not unique[key] then
+                unique[key] = { mob = mob, count = 0, npcID = mob.npcID }
+                table.insert(order, key)
+            end
+            unique[key].count = unique[key].count + 1
+        end
+    end
+
+    -- Ordena por contagem desc, depois por nome
+    table.sort(order, function(a, b)
+        local ca, cb = unique[a].count, unique[b].count
+        if ca ~= cb then return ca > cb end
+        return (unique[a].mob.name or "") < (unique[b].mob.name or "")
+    end)
+
+    for idx, key in ipairs(order) do
+        local u = unique[key]
+        local row = GetOrCreateSidebarRow(idx)
+        row.npcID = u.npcID
+        row.nameText:SetText(u.mob.name or ("npc " .. tostring(u.npcID)))
+        row.countText:SetText("x" .. u.count)
+
+        local displayID = u.mob.displayID
+        if not displayID and u.npcID and FarmBuddyMobTracker then
+            displayID = FarmBuddyMobTracker:GetDisplayID(u.npcID)
+        end
+        if displayID then
+            pcall(SetPortraitTextureFromCreatureDisplayID, row.portrait, displayID)
+            row.portrait:Show()
+        else
+            row.portrait:Hide()
+        end
+
+        if row.npcID and selectedNpcIDs[row.npcID] then
+            row.isSelected = true
+            row.highlight:SetColorTexture(1, 0.82, 0, 0.28)
+            row.highlight:Show()
+        end
+
+        row:ClearAllPoints()
+        row:SetPoint("TOPLEFT", sidebarContent, "TOPLEFT", 0, -((idx - 1) * SIDEBAR_ROW_HEIGHT))
+        row:SetPoint("RIGHT", sidebarContent, "RIGHT", 0, 0)
+        row:Show()
+    end
+
+    sidebarContent:SetHeight(math.max(1, #order * SIDEBAR_ROW_HEIGHT + 4))
+end
+
+-- ============================
+-- RENDER AGRUPADO (1 pin por npcID no centróide)
+-- ============================
+
+local function RenderGroupedMobPins(mapID, mobData, filter, displayMode)
     HideAllPins()
-    clusterPinIndex = 0
     expandedPinIndex = 0
 
     if not mobData or not mobData.mobs or not mobData.mobs[mapID] then
@@ -746,162 +842,103 @@ local function RenderMobPins(mapID, mobData, filter, displayMode)
     local containerW = pinContainer:GetWidth()
     local containerH = pinContainer:GetHeight()
 
-    local groups = GroupMobsByProximity(mobs, filter, containerW, containerH)
+    -- Agrupa por npcID, somando coordenadas para centróide
+    local grouped = {}
+    local order = {}
+    for _, mob in ipairs(mobs) do
+        if FarmBuddyMobTracker:MatchesFilter(mob, filter) then
+            local key = mob.npcID or mob.name or "?"
+            if not grouped[key] then
+                grouped[key] = { mob = mob, count = 0, sx = 0, sy = 0 }
+                table.insert(order, key)
+            end
+            local g = grouped[key]
+            g.count = g.count + 1
+            g.sx = g.sx + (mob.x / 100) * containerW
+            g.sy = g.sy + (mob.y / 100) * containerH
+        end
+    end
+
+    for _, key in ipairs(order) do
+        local g = grouped[key]
+        local cx = g.sx / g.count
+        local cy = g.sy / g.count
+
+        expandedPinIndex = expandedPinIndex + 1
+        local epin = GetOrCreateExpandedPin(expandedPinIndex)
+        epin:ClearAllPoints()
+        epin:SetPoint("CENTER", pinContainer, "TOPLEFT", cx, -cy)
+
+        local displayID = g.mob.displayID
+        if not displayID and g.mob.npcID and FarmBuddyMobTracker then
+            displayID = FarmBuddyMobTracker:GetDisplayID(g.mob.npcID)
+        end
+
+        local showPortrait = false
+        if displayID then
+            local retOk = pcall(SetPortraitTextureFromCreatureDisplayID, epin.portrait, displayID)
+            if retOk then
+                epin.portrait:Show()
+                epin.icon:Hide()
+                showPortrait = true
+            end
+        end
+
+        if not showPortrait then
+            epin.portrait:Hide()
+            epin.icon:Show()
+            local iconTexture = mobTypeIcons[g.mob.creatureType] or mobTypeIcons["Beast"]
+            epin.icon:SetTexture(iconTexture)
+            epin.icon:SetTexCoord(0.08, 0.92, 0.08, 0.92)
+        end
+
+        epin.badge:SetText(tostring(g.count))
+        epin.badge:Show()
+
+        local typePT = FarmBuddyMobTracker.creatureTypePT[g.mob.creatureType] or g.mob.creatureType
+        epin.tooltipText = string.format("%s  x%d", g.mob.name or "Mob", g.count)
+        epin.tooltipSubText = typePT
+
+        epin:Show()
+        table.insert(activePins, epin)
+    end
+end
+
+-- Render todas as spawns individuais dos npcIDs selecionados (isolados pela sidebar)
+local function RenderIsolatedSpawns(mapID, mobData, displayMode, npcIDSet)
+    HideAllPins()
+    expandedPinIndex = 0
+
+    if not mobData or not mobData.mobs or not mobData.mobs[mapID] then
+        return
+    end
+
+    local containerW = pinContainer:GetWidth()
+    local containerH = pinContainer:GetHeight()
     local pinIndex = 0
 
-    for _, group in ipairs(groups) do
-        -- Centro do grupo
-        local cx, cy = 0, 0
-        for _, entry in ipairs(group) do
-            cx = cx + entry.px
-            cy = cy + entry.py
-        end
-        cx = cx / #group
-        cy = cy / #group
-
-        if #group == 1 then
-            -- Mob solo: renderizar normalmente
+    for _, mob in ipairs(mobData.mobs[mapID]) do
+        if mob.npcID and npcIDSet[mob.npcID] then
             pinIndex = pinIndex + 1
             local pin = GetOrCreateMobPin(pinIndex)
+            local px = (mob.x / 100) * containerW
+            local py = (mob.y / 100) * containerH
             pin:ClearAllPoints()
-            pin:SetPoint("CENTER", pinContainer, "TOPLEFT", group[1].px, -group[1].py)
-            SetupMobPin(pin, group[1].mob, displayMode)
+            pin:SetPoint("CENTER", pinContainer, "TOPLEFT", px, -py)
+            SetupMobPin(pin, mob, displayMode)
             pin:Show()
             table.insert(activePins, pin)
-
-        elseif #group <= SCATTER_MAX then
-            -- Dispersão circular: espalhar em volta do centro
-            for i, entry in ipairs(group) do
-                pinIndex = pinIndex + 1
-                local pin = GetOrCreateMobPin(pinIndex)
-                local offX, offY = GetScatterOffset(i, #group)
-                pin:ClearAllPoints()
-                pin:SetPoint("CENTER", pinContainer, "TOPLEFT", cx + offX, -(cy + offY))
-                SetupMobPin(pin, entry.mob, displayMode)
-                pin:Show()
-                table.insert(activePins, pin)
-            end
-
-        elseif currentZoom >= CLUSTER_EXPAND_ZOOM then
-            -- Cluster expandido: agrupar por mob único e mostrar portrait + badge
-            local uniqueMobs = {}
-            local uniqueOrder = {}
-            for _, entry in ipairs(group) do
-                local key = entry.mob.name or tostring(entry.mob.npcID)
-                if not uniqueMobs[key] then
-                    uniqueMobs[key] = { mob = entry.mob, count = 0 }
-                    table.insert(uniqueOrder, key)
-                end
-                uniqueMobs[key].count = uniqueMobs[key].count + 1
-            end
-
-            -- Calcular layout: grid com máximo 2 colunas, centrada
-            local total = #uniqueOrder
-            local cols = math.min(total, 2)
-            local rows = math.ceil(total / cols)
-            local startX = cx - ((cols - 1) * EXPANDED_SPACING) / 2
-            local startY = cy - ((rows - 1) * EXPANDED_SPACING) / 2
-
-            for idx, key in ipairs(uniqueOrder) do
-                local data = uniqueMobs[key]
-                expandedPinIndex = expandedPinIndex + 1
-                local epin = GetOrCreateExpandedPin(expandedPinIndex)
-
-                local col = ((idx - 1) % cols)
-                local row = math.floor((idx - 1) / cols)
-                local ex = startX + col * EXPANDED_SPACING
-                local ey = startY + row * EXPANDED_SPACING
-
-                epin:ClearAllPoints()
-                epin:SetPoint("CENTER", pinContainer, "TOPLEFT", ex, -ey)
-
-                -- Configurar portrait ou ícone
-                local displayID = data.mob.displayID
-                if not displayID and data.mob.npcID and FarmBuddyMobTracker then
-                    displayID = FarmBuddyMobTracker:GetDisplayID(data.mob.npcID)
-                end
-
-                local showPortrait = false
-                if displayID then
-                    local retOk = pcall(SetPortraitTextureFromCreatureDisplayID, epin.portrait, displayID)
-                    if retOk then
-                        epin.portrait:Show()
-                        epin.icon:Hide()
-                        epin.border:Show()
-                        showPortrait = true
-                    end
-                end
-
-                if not showPortrait then
-                    epin.portrait:Hide()
-                    epin.border:Hide()
-                    epin.icon:Show()
-                    local iconTexture = mobTypeIcons[data.mob.creatureType] or mobTypeIcons["Beast"]
-                    epin.icon:SetTexture(iconTexture)
-                    epin.icon:SetTexCoord(0.08, 0.92, 0.08, 0.92)
-                end
-
-                -- Badge de contagem
-                epin.badge:SetText(tostring(data.count))
-                epin.badge:Show()
-
-                -- Tooltip
-                local typePT = FarmBuddyMobTracker.creatureTypePT[data.mob.creatureType] or data.mob.creatureType
-                local profLabel = ""
-                if data.mob.skinnable then
-                    profLabel = "|cffcc6600Couraria|r"
-                elseif data.mob.clothDropper then
-                    profLabel = "|cff9933ccAlfaiataria|r"
-                end
-                epin.tooltipText = string.format("%s  x%d", data.mob.name or "Mob", data.count)
-                epin.tooltipSubText = typePT .. (profLabel ~= "" and ("  -  " .. profLabel) or "")
-
-                epin:Show()
-                table.insert(activePins, epin)
-            end
-
-        else
-            -- Cluster com contador (sem zoom)
-            clusterPinIndex = clusterPinIndex + 1
-            local cpin = GetOrCreateClusterPin(clusterPinIndex)
-            cpin:ClearAllPoints()
-            cpin:SetPoint("CENTER", pinContainer, "TOPLEFT", cx, -cy)
-            cpin.countText:SetText(tostring(#group))
-
-            -- Tooltip com lista de mobs
-            cpin.tooltipText = string.format("|cffffd700%d mobs neste ponto|r", #group)
-            cpin.tooltipLines = {}
-            local tooltipCounts = {}
-            local tooltipOrder = {}
-            for _, entry in ipairs(group) do
-                local name = entry.mob.name or "Mob"
-                if not tooltipCounts[name] then
-                    tooltipCounts[name] = { count = 0, mob = entry.mob }
-                    table.insert(tooltipOrder, name)
-                end
-                tooltipCounts[name].count = tooltipCounts[name].count + 1
-            end
-            for _, name in ipairs(tooltipOrder) do
-                local info = tooltipCounts[name]
-                local profTag = ""
-                if info.mob.skinnable then
-                    profTag = " |cffcc6600[S]|r"
-                elseif info.mob.clothDropper then
-                    profTag = " |cff9933cc[T]|r"
-                end
-                table.insert(cpin.tooltipLines, string.format("%s x%d%s", name, info.count, profTag))
-            end
-
-            cpin:Show()
-            table.insert(activePins, cpin)
         end
     end
 end
 
--- Callback para re-renderizar pins quando zoom cruza threshold
-OnZoomThresholdCrossed = function()
-    if currentMode == "mobs" and currentMapID and currentImportData then
-        RenderMobPins(currentMapID, currentImportData, currentProfessionFilter, currentDisplayMode)
+-- Dispatch: se há mobs isolados, renderiza spawns individuais deles;
+-- caso contrário, render agrupado (1 pin por npcID no centróide).
+RenderMobPinsDispatch = function(mapID, mobData, filter, displayMode)
+    if selectedCount > 0 then
+        RenderIsolatedSpawns(mapID, mobData, displayMode, selectedNpcIDs)
+    else
+        RenderGroupedMobPins(mapID, mobData, filter, displayMode)
     end
 end
 
@@ -1128,7 +1165,7 @@ displayToggle:SetScript("OnClick", function(self)
 
     -- Re-renderizar pins
     if currentMode == "mobs" and currentMapID and currentImportData then
-        RenderMobPins(currentMapID, currentImportData, currentProfessionFilter, currentDisplayMode)
+        RenderMobPinsDispatch(currentMapID, currentImportData, currentProfessionFilter, currentDisplayMode)
     end
 end)
 
@@ -1139,6 +1176,7 @@ UpdateModeUI = function()
     if currentMode == "mobs" then
         professionDropdown:Show()
         displayToggle:Show()
+        sidebar:Show()
 
         -- Visual dos botões de modo
         btnModeNodes:SetNormalFontObject("GameFontDisable")
@@ -1146,6 +1184,7 @@ UpdateModeUI = function()
     else
         professionDropdown:Hide()
         displayToggle:Hide()
+        sidebar:Hide()
 
         btnModeNodes:SetNormalFontObject("GameFontHighlight")
         btnModeMobs:SetNormalFontObject("GameFontDisable")
@@ -1227,11 +1266,19 @@ LoadMap = function(mapID, data)
 
     UIDropDownMenu_SetText(dropdownFrame, zoneName)
 
+    -- Trocar de mapa reseta a seleção isolada
+    wipe(selectedNpcIDs)
+    selectedCount = 0
+    UpdateSidebarHeader()
+
     local success = LoadMapTextures(mapID)
     if success then
         if currentMode == "mobs" then
-            RenderMobPins(mapID, data, currentProfessionFilter, currentDisplayMode)
+            UpdateSidebar(mapID, data, currentProfessionFilter)
+            sidebar:Show()
+            RenderMobPinsDispatch(mapID, data, currentProfessionFilter, currentDisplayMode)
         else
+            sidebar:Hide()
             RenderPins(mapID, data)
         end
     else
@@ -1317,6 +1364,32 @@ UIDropDownMenu_SetWidth(dropdownFrame, 350)
 -- API PÚBLICA
 -- ============================
 
+-- Retorna o mapID inicial a ser exibido: o mapa atual do jogador (se estiver
+-- registrado no mapList) ou o primeiro mapa da lista como fallback.
+local function GetInitialMapID(mapList)
+    if not mapList or #mapList == 0 then
+        return nil
+    end
+
+    local playerMapID = nil
+    if C_Map and C_Map.GetBestMapForUnit then
+        local ok, id = pcall(C_Map.GetBestMapForUnit, "player")
+        if ok then
+            playerMapID = id
+        end
+    end
+
+    if playerMapID then
+        for _, mapID in ipairs(mapList) do
+            if mapID == playerMapID then
+                return playerMapID
+            end
+        end
+    end
+
+    return mapList[1]
+end
+
 function FarmBuddyMapPreview:Show(importData, mode)
     mode = mode or "nodes"
 
@@ -1351,7 +1424,7 @@ function FarmBuddyMapPreview:Show(importData, mode)
             return
         end
 
-        LoadMap(currentImportData.mapList[1], currentImportData)
+        LoadMap(GetInitialMapID(currentImportData.mapList), currentImportData)
         frame:Show()
     else
         -- Modo nodes (comportamento original)
@@ -1363,7 +1436,7 @@ function FarmBuddyMapPreview:Show(importData, mode)
         currentMode = "nodes"
         UpdateModeUI()
         currentImportData = importData
-        LoadMap(importData.mapList[1], importData)
+        LoadMap(GetInitialMapID(importData.mapList), importData)
         frame:Show()
     end
 end
