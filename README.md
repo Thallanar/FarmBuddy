@@ -35,6 +35,10 @@ World of Warcraft/_retail_/Interface/AddOns/FarmBuddy
 
 ## Changelog
 
+### v1.3.2
+- **Correção: botão "Limpar seleção"** — O botão limpava a sidebar mas o mapa continuava mostrando os mobs isolados (bug de escopo de variáveis Lua)
+- **Área de spawn no hover** — Ao passar o mouse em um pin agrupado, marcadores dourados aparecem nos spawn points reais do mob no mapa
+
 ### v1.3.1
 - **Agrupamento por espécie** — Mapa mostra 1 pin por mob único no centróide dos spawns, reduzindo drasticamente a poluição visual
 - **Sidebar de mobs** — Lista lateral com todos os mobs da zona (portrait + nome + count) ordenados por contagem
@@ -52,12 +56,3 @@ World of Warcraft/_retail_/Interface/AddOns/FarmBuddy
 - Correção de clipping de portraits fora da área do mapa
 - Correção de pins misturados entre modos ícone/portrait
 - DisplayID `0` tratado como pendente (fallback para ícone genérico)
-
-### v1.2.0
-- Novo sistema de **mob tracking** em tempo real (nameplate + mouseover)
-- **Mapa de mobs** com filtros por profissão (Couraria / Alfaiataria)
-- **Portraits** de mobs no mapa usando tabela de displayIDs do Wowhead
-- Fallback inteligente: ícone por tipo de criatura quando portrait não disponível
-- Toggle portrait/ícone no mapa
-- Botão de acesso ao mapa de mobs na janela principal
-- Agrupamento de mapas por continente no dropdown de zonas

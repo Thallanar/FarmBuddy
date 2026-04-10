@@ -20,6 +20,8 @@ local currentProfessionFilter = "skinning"
 local currentDisplayMode = "icon"   -- "icon" | "portrait"
 local selectedNpcIDs = {}           -- set de npcIDs isolados (npcID -> true)
 local selectedCount = 0
+local currentMapID = nil
+local currentImportData = nil
 
 -- Forward declare (definido mais abaixo, usado pelos handlers da sidebar)
 local RenderMobPinsDispatch
@@ -165,6 +167,48 @@ pinContainer:SetAllPoints()
 pinContainer:SetFrameLevel(mapTextureFrame:GetFrameLevel() + 10)
 pinContainer:SetClipsChildren(true)
 
+-- Overlay para marcadores de área de spawn (hover nos pins agrupados)
+local spawnOverlay = CreateFrame("Frame", nil, pinContainer)
+spawnOverlay:SetAllPoints()
+spawnOverlay:SetFrameLevel(pinContainer:GetFrameLevel() + 1)
+local spawnMarkerPool = {}
+local activeSpawnMarkers = {}
+
+local function GetOrCreateSpawnMarker(index)
+    if spawnMarkerPool[index] then
+        return spawnMarkerPool[index]
+    end
+    local marker = spawnOverlay:CreateTexture(nil, "ARTWORK")
+    marker:SetSize(10, 10)
+    marker:SetTexture("Interface\\CHARACTERFRAME\\TempPortraitAlphaMask")
+    marker:SetVertexColor(1, 0.82, 0, 0.6)
+    spawnMarkerPool[index] = marker
+    return marker
+end
+
+local function HideSpawnArea()
+    for _, marker in ipairs(activeSpawnMarkers) do
+        marker:Hide()
+    end
+    wipe(activeSpawnMarkers)
+end
+
+local function ShowSpawnArea(spawnPoints)
+    HideSpawnArea()
+    if not spawnPoints then return end
+    local containerW = pinContainer:GetWidth()
+    local containerH = pinContainer:GetHeight()
+    for i, pt in ipairs(spawnPoints) do
+        local marker = GetOrCreateSpawnMarker(i)
+        marker:ClearAllPoints()
+        local px = (pt.x / 100) * containerW
+        local py = (pt.y / 100) * containerH
+        marker:SetPoint("CENTER", pinContainer, "TOPLEFT", px, -py)
+        marker:Show()
+        activeSpawnMarkers[i] = marker
+    end
+end
+
 -- Clamp pan para não ultrapassar limites do mapa
 local function ClampPan()
     local scaledW = scrollChild:GetWidth() * currentZoom
@@ -255,8 +299,7 @@ local mobPinPool = {}
 local expandedPinPool = {}
 local activePins = {}
 
-local currentImportData = nil
-local currentMapID = nil
+-- currentImportData e currentMapID declarados no topo do arquivo
 
 local function GetOrCreateTile(index)
     if not tileTextures[index] then
@@ -389,6 +432,7 @@ local function HideAllPins()
     for _, pin in pairs(expandedPinPool) do
         pin:Hide()
     end
+    HideSpawnArea()
 end
 
 -- Texto de erro/status
@@ -622,9 +666,13 @@ local function GetOrCreateExpandedPin(index)
             end
             GameTooltip:Show()
         end
+        if self.spawnPoints then
+            ShowSpawnArea(self.spawnPoints)
+        end
     end)
     pin:SetScript("OnLeave", function()
         GameTooltip:Hide()
+        HideSpawnArea()
     end)
 
     expandedPinPool[index] = pin
@@ -849,13 +897,14 @@ local function RenderGroupedMobPins(mapID, mobData, filter, displayMode)
         if FarmBuddyMobTracker:MatchesFilter(mob, filter) then
             local key = mob.npcID or mob.name or "?"
             if not grouped[key] then
-                grouped[key] = { mob = mob, count = 0, sx = 0, sy = 0 }
+                grouped[key] = { mob = mob, count = 0, sx = 0, sy = 0, spawns = {} }
                 table.insert(order, key)
             end
             local g = grouped[key]
             g.count = g.count + 1
             g.sx = g.sx + (mob.x / 100) * containerW
             g.sy = g.sy + (mob.y / 100) * containerH
+            table.insert(g.spawns, { x = mob.x, y = mob.y })
         end
     end
 
@@ -898,6 +947,7 @@ local function RenderGroupedMobPins(mapID, mobData, filter, displayMode)
         local typePT = FarmBuddyMobTracker.creatureTypePT[g.mob.creatureType] or g.mob.creatureType
         epin.tooltipText = string.format("%s  x%d", g.mob.name or "Mob", g.count)
         epin.tooltipSubText = typePT
+        epin.spawnPoints = g.spawns
 
         epin:Show()
         table.insert(activePins, epin)
