@@ -35,6 +35,12 @@ World of Warcraft/_retail_/Interface/AddOns/FarmBuddy
 
 ## Changelog
 
+### v1.4.0
+- **Compatibilidade multi-idioma** — Categorias de loot agora usam classID/subclassID numéricos; funciona em qualquer idioma do client (PT-BR, EN, ES, etc.)
+- **Fallback de APIs** — `C_AddOns.GetAddOnMetadata`, `C_Item.GetItemInfo` e `C_Item.GetItemInfoInstant` com fallback para globals, evitando crash em versões diferentes do WoW
+- **+466 mobs de Voidstorm** — Beasts, Aberrations, Elementals e Humanoids extraídos do Wowhead
+- **Refatoração de MobDisplayIDs** — Tabela dividida em arquivos por zona (Eversong Woods, Zul'Aman, Harandar, Voidstorm)
+
 ### v1.3.2
 - **Correção: botão "Limpar seleção"** — O botão limpava a sidebar mas o mapa continuava mostrando os mobs isolados (bug de escopo de variáveis Lua)
 - **Área de spawn no hover** — Ao passar o mouse em um pin agrupado, marcadores dourados aparecem nos spawn points reais do mob no mapa
@@ -44,15 +50,3 @@ World of Warcraft/_retail_/Interface/AddOns/FarmBuddy
 - **Sidebar de mobs** — Lista lateral com todos os mobs da zona (portrait + nome + count) ordenados por contagem
 - **Seleção múltipla para isolar** — Clique em várias rows da sidebar para ver todos os spawns individuais dos mobs escolhidos; botão "Limpar seleção" para resetar
 - **Abre na zona do jogador** — Ao abrir o Mob Map, a zona atual do personagem é selecionada automaticamente se estiver registrada
-- **Filtro por DisplayIDs registrados** — Apenas mobs com `npcID` na tabela de DisplayIDs são exibidos no mapa
-- **Remoção da borda dourada bugada** dos mob pins
-- **Limpeza grande:** removidos o modo detalhado (clustering por proximidade), dispersão circular, cluster pins e lógica de re-render por zoom threshold
-
-### v1.3.0
-- **Zoom e pan no mapa** — Scroll do mouse para zoom (1x-5x), botão direito para arrastar
-- **Clustering inteligente de mobs** — Mobs próximos agrupados com contador; zoom 2x+ expande em portraits únicos com quantidade
-- **Overlay de exploração** — Mapas renderizam com texturas exploradas via `C_MapExplorationInfo`
-- **+120 mobs** adicionados à tabela de displayIDs (Eversong Woods, Zul'Aman, Harandar, Voidstorm)
-- Correção de clipping de portraits fora da área do mapa
-- Correção de pins misturados entre modos ícone/portrait
-- DisplayID `0` tratado como pendente (fallback para ícone genérico)

@@ -3,7 +3,7 @@ mainUI:RegisterEvent("LOOT_OPENED")
 
 FarmTracker = FarmTracker or {}
 FarmTracker.name = "FarmBuddy"
-FarmTracker.version = C_AddOns.GetAddOnMetadata("FarmBuddy", "Version")
+FarmTracker.version = (C_AddOns and C_AddOns.GetAddOnMetadata or GetAddOnMetadata)("FarmBuddy", "Version")
 FarmTracker.sessionActive = false
 FarmTracker.paused = false
 FarmTracker.startTime = 0
@@ -77,33 +77,40 @@ local function IsFarmPaused()
     return FarmTracker.isPaused and FarmTracker:isPaused()
 end
 
-mainUI:SetScript("OnEvent", function(_, event) 
+local SafeGetItemInfo = C_Item and C_Item.GetItemInfo or GetItemInfo
+local SafeGetItemInfoInstant = C_Item and C_Item.GetItemInfoInstant or GetItemInfoInstant
+
+mainUI:SetScript("OnEvent", function(_, event)
     if event == "LOOT_OPENED" and FarmTracker.sessionActive and not IsFarmPaused() then
         local numLootItems = GetNumLootItems()
         for i = 1, numLootItems do
             local itemLink = GetLootSlotLink(i)
             if itemLink then
-                local itemName, _, itemQuality, _, _, itemType, itemSubType, _, _, iconTexture, _, _, _, bindType = C_Item.GetItemInfo(itemLink)
+                local itemName, _, itemQuality, _, _, itemType, itemSubType, _, _, iconTexture, _, _, _, bindType = SafeGetItemInfo(itemLink)
                 local _, _, quantity = GetLootSlotInfo(i)
                 quantity = quantity or 1
 
-                local itemID = C_Item.GetItemInfoInstant(itemLink)
-                local categoryGroup = FarmTracker:GetCategoryGroup(itemSubType)
-                FarmTracker.lootTable[itemID] = FarmTracker.lootTable[itemID] or {
-                    count = 0,
-                    icon = iconTexture or "",
-                    label = itemName or itemLink,
-                    link = itemLink,
-                    group = categoryGroup,
-                    category = itemSubType,
-                    bindType = bindType,
-                }
+                local itemID, _, _, _, _, classID, subclassID = SafeGetItemInfoInstant(itemLink)
+                if itemID then
+                    -- Usa classID/subclassID para categoria (independente de idioma)
+                    local englishSubType = FarmTracker:GetEnglishSubType(classID, subclassID) or itemSubType
+                    local categoryGroup = FarmTracker:GetCategoryGroup(englishSubType)
+                    FarmTracker.lootTable[itemID] = FarmTracker.lootTable[itemID] or {
+                        count = 0,
+                        icon = iconTexture or "",
+                        label = itemName or itemLink,
+                        link = itemLink,
+                        group = categoryGroup,
+                        category = englishSubType,
+                        bindType = bindType,
+                    }
 
-                FarmTracker.lootTable[itemID].count = FarmTracker.lootTable[itemID].count + quantity
+                    FarmTracker.lootTable[itemID].count = FarmTracker.lootTable[itemID].count + quantity
 
-                -- Atualiza a exibição
-                if DisplayItem and DisplayItem.UpdateDisplay then
-                    DisplayItem:UpdateDisplay(FarmTracker.lootTable)
+                    -- Atualiza a exibição
+                    if DisplayItem and DisplayItem.UpdateDisplay then
+                        DisplayItem:UpdateDisplay(FarmTracker.lootTable)
+                    end
                 end
             end
         end

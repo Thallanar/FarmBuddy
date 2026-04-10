@@ -1,7 +1,7 @@
 ## Interface: 120001
 ## Title: FarmBuddy
 ## Notes: Rastreia coleta de itens durante sessões de farm
-## Version: 1.3.2
+## Version: 1.4.0
 ## Author: Thallanar
 ## SavedVariables: FarmBuddyDB
 
@@ -14,6 +14,10 @@ libs/LibDeflate/LibDeflate.lua
 libs/LibBase64-1.0/LibBase64-1.0.lua
 
 data/MobDisplayIDs.lua
+data/MobDisplayIDs_EversongWoods.lua
+data/MobDisplayIDs_ZulAman.lua
+data/MobDisplayIDs_Harandar.lua
+data/MobDisplayIDs_Voidstorm.lua
 
 core/Init.lua
 core/Tracker.lua
