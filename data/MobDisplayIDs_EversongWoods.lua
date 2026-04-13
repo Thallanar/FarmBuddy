@@ -62,8 +62,6 @@ local IDs = {
     [250683] = 66815,   -- Coralfang
     [250719] = 131678,  -- Cre'van (Rare)
     [250841] = 130603,  -- Bad Zed (Rare)
-
-    -- Humanoids (displayID pendente - preencher via Wowhead)
     [244031] = 130714,  -- Amani Battlerager
     [236374] = 130720,  -- Amani Enforcer
     [236372] = 130714,  -- Amani Feller
@@ -109,23 +107,9 @@ local IDs = {
     [242979] = 124892,  -- Dark Caller (Elite)
     [242978] = 127811,  -- Death Caster (Elite)
     [244432] = 130796,  -- Hal'nok the Trampler (Elite)
-    [246955] = 0,  -- Lamyne of the Undercroft (Elite)
-    [246976] = 0,  -- Lost Theldrin (Elite)
-    [246938] = 0,  -- Nexus-Edge Hadim (Elite)
-    [246979] = 0,  -- Neydra the Starving (Elite)
-    [246952] = 0,  -- Petyoll the Razorleaf (Elite)
-    [259048] = 0,  -- Seladine (Elite)
-    [246927] = 0,  -- Senior Tinker Ozwold (Elite)
-    [246944] = 0,  -- The Talon of Jan'alai (Elite)
-    [246946] = 0,  -- The Wing of Akil'zon (Elite)
-    [246982] = 0,  -- Thorn-Witch Liset (Elite)
-    [246981] = 0,  -- Thornspeaker Edgath (Elite)
-    [242982] = 0,  -- Twilight Bruiser (Elite)
-    [245939] = 0,  -- Twilight Darkcaller (Elite)
-    [242980] = 0,  -- Twilight Death-Dealer (Elite)
-    [242913] = 0,  -- Vael'thas Dawnsoar (Elite)
-    [246975] = 0,  -- Vylenna the Defector (Elite)
-    [246942] = 0,  -- Zadu, Fist of Nalorakk (Elite)
+    [242982] = 127808,  -- Twilight Bruiser (Elite)
+    [245939] = 127811,  -- Twilight Darkcaller (Elite)
+    [242980] = 124906,  -- Twilight Death-Dealer (Elite)
 }
 
 for npcID, displayID in pairs(IDs) do

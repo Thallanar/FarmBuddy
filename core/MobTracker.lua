@@ -28,7 +28,52 @@ FarmBuddyMobTracker.creatureTypePT = {
     ["Beast"]     = "Fera",
     ["Humanoid"]  = "Humanoide",
     ["Dragonkin"] = "Draconiano",
+    ["Aberration"] = "Aberração",
+    ["Elemental"]  = "Elemental",
+    ["Demon"]      = "Demônio",
+    ["Undead"]     = "Morto-vivo",
+    ["Giant"]      = "Gigante",
 }
+
+-- Mapeamento reverso: nome localizado → nome inglês (para clientes não-EN)
+FarmBuddyMobTracker.creatureTypeToEnglish = {}
+do
+    -- Tipos que nos interessam para tracking
+    local knownTypes = { "Beast", "Humanoid", "Dragonkin", "Aberration", "Elemental",
+                         "Demon", "Undead", "Giant" }
+    for _, enName in ipairs(knownTypes) do
+        -- Em client EN, retorna o próprio nome; em PT-BR retorna localizado
+        FarmBuddyMobTracker.creatureTypeToEnglish[enName] = enName
+    end
+    -- Mapeamento manual para localizações conhecidas (PT-BR, ES, etc.)
+    local localizations = {
+        -- PT-BR
+        ["Fera"] = "Beast", ["Humanoide"] = "Humanoid", ["Draconiano"] = "Dragonkin",
+        ["Aberração"] = "Aberration", ["Elemental"] = "Elemental",
+        ["Demônio"] = "Demon", ["Morto-vivo"] = "Undead", ["Gigante"] = "Giant",
+        -- ES
+        ["Bestia"] = "Beast", ["Humanoide"] = "Humanoid", ["Dragontino"] = "Dragonkin",
+        ["Aberración"] = "Aberration", ["Demonio"] = "Demon",
+        ["No-muerto"] = "Undead", ["Gigante"] = "Giant",
+        -- FR
+        ["Bête"] = "Beast", ["Humanoïde"] = "Humanoid", ["Draconien"] = "Dragonkin",
+        ["Aberration"] = "Aberration", ["Élémentaire"] = "Elemental",
+        ["Démon"] = "Demon", ["Mort-vivant"] = "Undead", ["Géant"] = "Giant",
+        -- DE
+        ["Wildtier"] = "Beast", ["Humanoid"] = "Humanoid", ["Drachkin"] = "Dragonkin",
+        ["Aberration"] = "Aberration", ["Elementar"] = "Elemental",
+        ["Dämon"] = "Demon", ["Untoter"] = "Undead", ["Riese"] = "Giant",
+    }
+    for locName, enName in pairs(localizations) do
+        FarmBuddyMobTracker.creatureTypeToEnglish[locName] = enName
+    end
+end
+
+-- Converte tipo localizado para inglês
+function FarmBuddyMobTracker:ToEnglishCreatureType(localizedType)
+    if not localizedType then return nil end
+    return self.creatureTypeToEnglish[localizedType]
+end
 
 -- Nomes das profissões em pt-BR
 FarmBuddyMobTracker.professionNamePT = {
@@ -197,10 +242,11 @@ local function ExtractMobInfo(unitToken)
     if not npcID then return nil end
 
     local name = UnitName(unitToken)
-    local creatureType = UnitCreatureType(unitToken)
+    local rawType = UnitCreatureType(unitToken)
+    local creatureType = FarmBuddyMobTracker:ToEnglishCreatureType(rawType)
 
-    -- Só nos interessa Beast, Humanoid e Dragonkin
-    if creatureType ~= "Beast" and creatureType ~= "Humanoid" and creatureType ~= "Dragonkin" then
+    -- Só nos interessa tipos relevantes para farm
+    if not creatureType then
         return nil
     end
 

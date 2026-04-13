@@ -1,7 +1,7 @@
 ## Interface: 120001
 ## Title: FarmBuddy
 ## Notes: Rastreia coleta de itens durante sessões de farm
-## Version: 1.4.0
+## Version: 1.4.1
 ## Author: Thallanar
 ## SavedVariables: FarmBuddyDB
 
