@@ -21,6 +21,7 @@ World of Warcraft addon for tracking farming sessions, automatically capturing l
 - **Multi-select isolation** — Click sidebar rows to isolate one or more mobs and see all individual spawns
 - **Opens on player zone** — The map automatically selects the player's current zone when opened (if registered)
 - **Exploration overlay** — Maps rendered with explored textures for full visualization
+- **Route Maker (pulls)** — MDT-style route planning: group mobs into numbered pulls, optimize order, save and load routes per zone
 
 ## Slash Commands
 
@@ -36,6 +37,16 @@ World of Warcraft/_retail_/Interface/AddOns/FarmBuddy
 
 ## Changelog
 
+### v1.5.0
+- **Route Maker** — New MDT-style route planning system for farming routes
+- **Pull system** — Group mobs into numbered pulls by clicking individual spawns on the map
+- **Pull panel** — Dedicated left-side panel showing all pulls with color-coded bars, mob portraits and delete buttons
+- **Pull navigation** — Click any pull in the panel to re-select it for editing
+- **Route optimization** — One-click pull order optimization using Nearest Neighbor + 2-opt algorithm
+- **Route persistence** — Save, load and delete routes per zone via dropdown
+- **Visual feedback** — Colored rings around mobs indicating their pull, lines connecting pull centroids on the map
+- **Filter compatibility** — Sidebar mob filtering works during route editing for isolating specific mobs
+
 ### v1.4.1
 - **New creature types** — Added Aberration, Elemental, Demon, Undead and Giant support to MobTracker
 - **Reverse type mapping** — Automatic translation of localized creature types (PT-BR, ES, FR, DE) to English, ensuring correct tracking on any client language
@@ -47,7 +58,3 @@ World of Warcraft/_retail_/Interface/AddOns/FarmBuddy
 - **API fallbacks** — `C_AddOns.GetAddOnMetadata`, `C_Item.GetItemInfo` and `C_Item.GetItemInfoInstant` with fallback to globals, preventing crashes across different WoW versions
 - **+466 Voidstorm mobs** — Beasts, Aberrations, Elementals and Humanoids extracted from Wowhead
 - **MobDisplayIDs refactor** — Table split into per-zone files (Eversong Woods, Zul'Aman, Harandar, Voidstorm)
-
-### v1.3.2
-- **Fix: clear selection button** — Button cleared the sidebar but the map kept showing isolated mobs (Lua variable scope bug)
-- **Spawn area on hover** — Hovering a grouped pin now shows golden markers at the mob's real spawn points on the map
