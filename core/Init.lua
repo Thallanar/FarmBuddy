@@ -158,6 +158,11 @@ eventFrame:SetScript("OnEvent", function(self, event, addonName)
             FarmBuddyMobTracker:InitProfile(profile)
         end
 
+        -- Migração: inicializa routes se não existir
+        if not profile.routes then
+            profile.routes = {}
+        end
+
         -- Restaura visibilidade do frame principal
         if profile.frameVisible and FarmTracker.frame then
             FarmTracker.frame:Show()
