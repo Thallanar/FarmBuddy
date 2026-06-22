@@ -1,5 +1,20 @@
 FarmTracker = FarmTracker or {}
 
+-- bindTypes que NÃO podem ser vendidos na Casa de Leilões.
+-- Esses itens não devem entrar no cálculo de valor do histórico.
+local NON_MARKETABLE_BIND_TYPES = {
+    [1] = true, -- Bind on Pickup (soulbound)
+    [7] = true, -- Warbound (vinculado à conta WoW)
+    [8] = true, -- Vinculado à conta Battle.net
+    [9] = true, -- Warbound até equipar (vinculado à warband)
+}
+
+-- Retorna true se o item (pelo bindType) pode ser vendido no mercado.
+-- Soulbound e warbound retornam false.
+function FarmTracker:IsMarketable(bindType)
+    return not NON_MARKETABLE_BIND_TYPES[bindType or 0]
+end
+
 function FarmTracker:IsTSMAvailable()
     return TSMAPI_ALL and TSMAPI_ALL.Item and true or false
 end

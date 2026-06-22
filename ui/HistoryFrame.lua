@@ -88,8 +88,8 @@ local function CalculateSessionValue(lootTable)
 
     local totalValue = 0
     for itemID, data in pairs(lootTable) do
-        -- Ignora itens soulbound (BoP) no cálculo de valor
-        if data.bindType ~= 1 then
+        -- Ignora itens não vendáveis (soulbound e warbound) no cálculo de valor
+        if FarmTracker:IsMarketable(data.bindType) then
             local price = FarmTracker:GetItemPrice(tonumber(itemID), data.link)
             if price then
                 totalValue = totalValue + (price * data.count)
@@ -198,8 +198,8 @@ local function BuildHistory()
                 text:SetPoint("LEFT", icon, "RIGHT", 5, 0)
 
                 local itemText = (data.link or data.label or "?") .. " x" .. (data.count or 0)
-                -- Só mostra preço para itens que não são soulbound (BoP)
-                if data.bindType ~= 1 then
+                -- Só mostra preço para itens vendáveis (exclui soulbound e warbound)
+                if FarmTracker:IsMarketable(data.bindType) then
                     local price = FarmTracker:GetItemPrice(tonumber(data.itemID), data.link)
                     if price then
                         local totalItemPrice = price * (data.count or 0)
