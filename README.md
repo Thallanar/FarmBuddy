@@ -75,8 +75,5 @@ FarmBuddy is free software: you can redistribute it and/or modify it under the t
 - **Visual feedback** — Colored rings around mobs indicating their pull, lines connecting pull centroids on the map
 - **Filter compatibility** — Sidebar mob filtering works during route editing for isolating specific mobs
 
-### v1.4.1
-- **New creature types** — Added Aberration, Elemental, Demon, Undead and Giant support to MobTracker
-- **Reverse type mapping** — Automatic translation of localized creature types (PT-BR, ES, FR, DE) to English, ensuring correct tracking on any client language
-- **DisplayID cleanup** — Removed all mobs with placeholder displayID=0 from Voidstorm and Eversong Woods
-- **+150 mobs with real DisplayIDs** — New mobs from Zul'Aman, Harandar and Voidstorm with correct displayIDs
+### v1.4.2
+- **Fix: warbound items in profit estimate** — Warbound (account/warband-bound) items were incorrectly counted toward a session's farmed gold even though they cannot be sold. Value calculation now excludes all non-marketable bind types (soulbound and warbound), via a centralized `IsMarketable` check
