@@ -14,7 +14,7 @@ local LDB = LibStub("LibDataBroker-1.1"):NewDataObject("Farm Buddy",
     end,
     OnTooltipShow = function(tooltip)
         tooltip:AddLine("Farm Buddy")
-        tooltip:AddLine("Clique para abrir/fechar.", 1, 1, 1)
+        tooltip:AddLine(FarmBuddyL["Click to toggle the window."], 1, 1, 1)
     end,
 })
 

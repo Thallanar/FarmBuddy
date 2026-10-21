@@ -119,7 +119,7 @@ eventFrame:SetScript("OnEvent", function(self, event, addonName)
     if addonName == "FarmBuddy" then
         C_Timer.After(3, function()
             local version = (C_AddOns and C_AddOns.GetAddOnMetadata or GetAddOnMetadata)("FarmBuddy", "Version")
-            print("|cff00ff00[FarmBuddy]|r v" .. (version or "?") .. " carregado! Digite |cff00ff00/farmbuddy|r para abrir.")
+            print("|cff00ff00[FarmBuddy]|r " .. string.format(FarmBuddyL["v%s loaded! Type %s to open."], version or "?", "|cff00ff00/farmbuddy|r"))
         end)
 
         local profile = FarmTracker:GetProfile()
@@ -222,14 +222,14 @@ eventFrame:SetScript("OnEvent", function(self, event, addonName)
             local parsedData, err = FarmBuddyGatherImport:ParseFromDB(nil)
             if parsedData and parsedData.totalNodes > 0 then
                 FarmBuddyGatherImport:SaveImport(
-                    "GatherMate2 (auto-detectado)",
+                    FarmBuddyL["GatherMate2 (auto-detected)"],
                     parsedData,
                     "gathermate2db_auto"
                 )
                 C_Timer.After(4, function()
-                    print("|cff00ff00[FarmBuddy]|r Dados do GatherMate2 detectados! "
-                        .. parsedData.totalNodes .. " nodes importados automaticamente. "
-                        .. "Abra o Import Manager para visualizar.")
+                    print("|cff00ff00[FarmBuddy]|r " .. string.format(
+                        FarmBuddyL["GatherMate2 data detected! %d nodes imported automatically. Open the Import Manager to view them."],
+                        parsedData.totalNodes))
                 end)
             end
         end

@@ -1,3 +1,5 @@
+local L = FarmBuddyL
+
 FarmBuddyImportManager = {}
 
 local frame = CreateFrame("Frame", "FarmBuddyImportManagerFrame", UIParent, BackdropTemplateMixin and "BackdropTemplate")
@@ -24,7 +26,7 @@ titleBar:SetPoint("TOP", frame, "TOP", 0, -6)
 
 local titleText = titleBar:CreateFontString(nil, "OVERLAY", "GameFontNormal")
 titleText:SetPoint("LEFT", 15, 0)
-titleText:SetText("Importar GatherMate2")
+titleText:SetText(L["Import GatherMate2"])
 
 -- Close Button
 local closeButton = CreateFrame("Button", nil, titleBar)
@@ -44,12 +46,12 @@ end)
 local btnFromDB = CreateFrame("Button", nil, frame, "GameMenuButtonTemplate")
 btnFromDB:SetSize(190, 24)
 btnFromDB:SetPoint("TOPLEFT", 15, -35)
-btnFromDB:SetText("Importar do GatherMate2")
+btnFromDB:SetText(L["Import from GatherMate2"])
 
 local btnFromString = CreateFrame("Button", nil, frame, "GameMenuButtonTemplate")
 btnFromString:SetSize(190, 24)
 btnFromString:SetPoint("TOPRIGHT", -15, -35)
-btnFromString:SetText("Colar String")
+btnFromString:SetText(L["Paste String"])
 
 -- ScrollFrame para lista de imports
 local scrollFrame = CreateFrame("ScrollFrame", nil, frame, "UIPanelScrollFrameTemplate")
@@ -80,7 +82,7 @@ pasteFrame:Hide()
 
 local pasteTitle = pasteFrame:CreateFontString(nil, "OVERLAY", "GameFontNormal")
 pasteTitle:SetPoint("TOP", 0, -15)
-pasteTitle:SetText("Cole a string de exportação do GatherMate2")
+pasteTitle:SetText(L["Paste the GatherMate2 export string"])
 
 local pasteScrollFrame = CreateFrame("ScrollFrame", "FarmBuddyPasteScroll", pasteFrame, "UIPanelScrollFrameTemplate")
 pasteScrollFrame:SetPoint("TOPLEFT", 15, -35)
@@ -102,12 +104,12 @@ pasteErrorText:SetText("")
 local btnPasteProcess = CreateFrame("Button", nil, pasteFrame, "GameMenuButtonTemplate")
 btnPasteProcess:SetSize(120, 24)
 btnPasteProcess:SetPoint("BOTTOMRIGHT", -50, 12)
-btnPasteProcess:SetText("Processar")
+btnPasteProcess:SetText(L["Process"])
 
 local btnPasteCancel = CreateFrame("Button", nil, pasteFrame, "GameMenuButtonTemplate")
 btnPasteCancel:SetSize(100, 24)
 btnPasteCancel:SetPoint("RIGHT", btnPasteProcess, "LEFT", -5, 0)
-btnPasteCancel:SetText("Cancelar")
+btnPasteCancel:SetText(L["Cancel"])
 
 btnPasteCancel:SetScript("OnClick", function()
     pasteEditBox:SetText("")
@@ -133,7 +135,7 @@ nameFrame:Hide()
 
 local nameTitle = nameFrame:CreateFontString(nil, "OVERLAY", "GameFontNormal")
 nameTitle:SetPoint("TOP", 0, -15)
-nameTitle:SetText("Nome do Import")
+nameTitle:SetText(L["Import Name"])
 
 local nameEditBox = CreateFrame("EditBox", nil, nameFrame, "InputBoxTemplate")
 nameEditBox:SetSize(280, 22)
@@ -149,12 +151,12 @@ local pendingSource = nil
 local btnNameConfirm = CreateFrame("Button", nil, nameFrame, "GameMenuButtonTemplate")
 btnNameConfirm:SetSize(100, 24)
 btnNameConfirm:SetPoint("BOTTOMRIGHT", -30, 12)
-btnNameConfirm:SetText("Salvar")
+btnNameConfirm:SetText(L["Save"])
 
 local btnNameCancel = CreateFrame("Button", nil, nameFrame, "GameMenuButtonTemplate")
 btnNameCancel:SetSize(100, 24)
 btnNameCancel:SetPoint("RIGHT", btnNameConfirm, "LEFT", -5, 0)
-btnNameCancel:SetText("Cancelar")
+btnNameCancel:SetText(L["Cancel"])
 
 btnNameCancel:SetScript("OnClick", function()
     nameEditBox:SetText("")
@@ -180,18 +182,18 @@ typeFrame:Hide()
 
 local typeTitle = typeFrame:CreateFontString(nil, "OVERLAY", "GameFontNormal")
 typeTitle:SetPoint("TOP", 0, -15)
-typeTitle:SetText("Selecione os tipos de node")
+typeTitle:SetText(L["Select node types"])
 
 local typeCheckboxes = {}
 local typeSelectedKeys = {}
 
 local btnTypeConfirm = CreateFrame("Button", nil, typeFrame, "GameMenuButtonTemplate")
 btnTypeConfirm:SetSize(100, 24)
-btnTypeConfirm:SetText("Importar")
+btnTypeConfirm:SetText(L["Import"])
 
 local btnTypeCancel = CreateFrame("Button", nil, typeFrame, "GameMenuButtonTemplate")
 btnTypeCancel:SetSize(100, 24)
-btnTypeCancel:SetText("Cancelar")
+btnTypeCancel:SetText(L["Cancel"])
 
 btnTypeCancel:SetScript("OnClick", function()
     typeFrame:Hide()
@@ -208,7 +210,7 @@ local BuildImportList
 local function ShowNameDialog(parsedData, source)
     pendingData = parsedData
     pendingSource = source
-    nameInfoText:SetText(string.format("%d nodes em %d mapas", parsedData.totalNodes, #parsedData.mapList))
+    nameInfoText:SetText(string.format(L["%d nodes in %d maps"], parsedData.totalNodes, #parsedData.mapList))
     nameEditBox:SetText("")
     nameFrame:Show()
     nameEditBox:SetFocus()
@@ -227,7 +229,7 @@ btnNameConfirm:SetScript("OnClick", function()
         nameEditBox:SetText("")
         nameFrame:Hide()
         BuildImportList()
-        print("|cff00ff00[FarmBuddy]|r Import '" .. name .. "' salvo com sucesso!")
+        print("|cff00ff00[FarmBuddy]|r " .. string.format(L["Import '%s' saved successfully!"], name))
     end
 end)
 
@@ -241,7 +243,7 @@ end)
 local function ShowTypeSelection()
     local available, err = FarmBuddyGatherImport:GetAvailableTypes()
     if not available then
-        print("|cffff0000[FarmBuddy]|r " .. (err or "Erro desconhecido"))
+        print("|cffff0000[FarmBuddy]|r " .. (err or L["Unknown error"]))
         return
     end
 
@@ -252,14 +254,14 @@ local function ShowTypeSelection()
     wipe(typeCheckboxes)
     wipe(typeSelectedKeys)
 
-    local nodeTypePT = {
-        ["Herb"] = "Ervas",
-        ["Mine"] = "Minérios",
-        ["Fish"] = "Peixes",
-        ["Gas"] = "Gases",
-        ["Treasure"] = "Tesouros",
-        ["Archaeology"] = "Arqueologia",
-        ["Logging"] = "Madeira",
+    local nodeTypeLabel = {
+        ["Herb"] = L["Herbs"],
+        ["Mine"] = L["Ores"],
+        ["Fish"] = L["Fish"],
+        ["Gas"] = L["Gases"],
+        ["Treasure"] = L["Treasures"],
+        ["Archaeology"] = L["Archaeology"],
+        ["Logging"] = L["Wood"],
     }
 
     local yOffset = -35
@@ -269,7 +271,7 @@ local function ShowTypeSelection()
         cb:SetChecked(true)
         typeSelectedKeys[typeInfo.prefix] = true
 
-        local labelText = nodeTypePT[typeInfo.nodeType] or typeInfo.nodeType
+        local labelText = nodeTypeLabel[typeInfo.nodeType] or typeInfo.nodeType
         if typeInfo.totalNodes then
             labelText = labelText .. "  |cff888888(" .. typeInfo.totalNodes .. " nodes)|r"
         end
@@ -313,7 +315,7 @@ btnTypeConfirm:SetScript("OnClick", function()
     end
 
     if not hasSelection then
-        typeErrorText:SetText("Selecione pelo menos um tipo.")
+        typeErrorText:SetText(L["Select at least one type."])
         return
     end
 
@@ -326,7 +328,7 @@ btnTypeConfirm:SetScript("OnClick", function()
 
     local parsedData, err = FarmBuddyGatherImport:ParseFromDB(filter)
     if not parsedData then
-        typeErrorText:SetText(err or "Erro ao importar")
+        typeErrorText:SetText(err or L["Error importing"])
         return
     end
 
@@ -354,7 +356,7 @@ btnPasteProcess:SetScript("OnClick", function()
     local parsedData, err = FarmBuddyGatherImport:ParseFromString(inputText)
 
     if not parsedData then
-        pasteErrorText:SetText(err or "Erro ao processar string")
+        pasteErrorText:SetText(err or L["Error processing string"])
         return
     end
 
@@ -382,7 +384,7 @@ renameFrame:Hide()
 
 local renameTitle = renameFrame:CreateFontString(nil, "OVERLAY", "GameFontNormal")
 renameTitle:SetPoint("TOP", 0, -15)
-renameTitle:SetText("Renomear Import")
+renameTitle:SetText(L["Rename Import"])
 
 local renameEditBox = CreateFrame("EditBox", nil, renameFrame, "InputBoxTemplate")
 renameEditBox:SetSize(240, 22)
@@ -394,12 +396,12 @@ local renameIndex = nil
 local btnRenameConfirm = CreateFrame("Button", nil, renameFrame, "GameMenuButtonTemplate")
 btnRenameConfirm:SetSize(100, 24)
 btnRenameConfirm:SetPoint("BOTTOMRIGHT", -20, 10)
-btnRenameConfirm:SetText("Salvar")
+btnRenameConfirm:SetText(L["Save"])
 
 local btnRenameCancel = CreateFrame("Button", nil, renameFrame, "GameMenuButtonTemplate")
 btnRenameCancel:SetSize(100, 24)
 btnRenameCancel:SetPoint("RIGHT", btnRenameConfirm, "LEFT", -5, 0)
-btnRenameCancel:SetText("Cancelar")
+btnRenameCancel:SetText(L["Cancel"])
 
 btnRenameCancel:SetScript("OnClick", function()
     renameFrame:Hide()
@@ -437,7 +439,7 @@ exportFrame:Hide()
 
 local exportTitle = exportFrame:CreateFontString(nil, "OVERLAY", "GameFontNormal")
 exportTitle:SetPoint("TOP", 0, -15)
-exportTitle:SetText("Exportar Import")
+exportTitle:SetText(L["Export Import"])
 
 local exportScrollFrame = CreateFrame("ScrollFrame", "FarmBuddyExportScroll", exportFrame, "UIPanelScrollFrameTemplate")
 exportScrollFrame:SetPoint("TOPLEFT", 15, -35)
@@ -454,7 +456,7 @@ exportScrollFrame:SetScrollChild(exportEditBox)
 local btnExportClose = CreateFrame("Button", nil, exportFrame, "GameMenuButtonTemplate")
 btnExportClose:SetSize(100, 24)
 btnExportClose:SetPoint("BOTTOM", 0, 12)
-btnExportClose:SetText("Fechar")
+btnExportClose:SetText(L["Close"])
 btnExportClose:SetScript("OnClick", function()
     exportEditBox:SetText("")
     exportFrame:Hide()
@@ -464,7 +466,7 @@ end)
 local function ShowExportDialog(index)
     local exportString, err = FarmBuddyGatherImport:ExportToString(index)
     if not exportString then
-        print("|cffff0000[FarmBuddy]|r " .. (err or "Erro ao exportar"))
+        print("|cffff0000[FarmBuddy]|r " .. (err or L["Error exporting"]))
         return
     end
 
@@ -490,7 +492,7 @@ BuildImportList = function()
     if #imports == 0 then
         local emptyText = scrollChild:CreateFontString(nil, "OVERLAY", "GameFontHighlight")
         emptyText:SetPoint("CENTER", scrollChild, "TOP", 0, -60)
-        emptyText:SetText("Nenhum import salvo.\nUse os botões acima para importar dados do GatherMate2.")
+        emptyText:SetText(L["No saved imports.\nUse the buttons above to import GatherMate2 data."])
 
         local wrapper = CreateFrame("Frame", nil, scrollChild)
         wrapper:SetSize(390, 120)
@@ -516,7 +518,7 @@ BuildImportList = function()
         -- Nome
         local nameLabel = row:CreateFontString(nil, "OVERLAY", "GameFontNormal")
         nameLabel:SetPoint("TOPLEFT", 10, -5)
-        nameLabel:SetText("|cff00ff00" .. (importData.name or "Sem nome") .. "|r")
+        nameLabel:SetText("|cff00ff00" .. (importData.name or L["Unnamed"]) .. "|r")
 
         -- Info
         local infoLabel = row:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
@@ -524,7 +526,7 @@ BuildImportList = function()
 
         local mapCount = importData.mapList and #importData.mapList or 0
         local sourceLabel = importData.source == "gathermate2db" and "GatherMate2" or "String"
-        infoLabel:SetText(string.format("%d nodes  |  %d mapas  |  %s  |  %s",
+        infoLabel:SetText(string.format(L["%d nodes  |  %d maps  |  %s  |  %s"],
             importData.totalNodes or 0,
             mapCount,
             sourceLabel,
@@ -535,7 +537,7 @@ BuildImportList = function()
         local btnView = CreateFrame("Button", nil, row, "GameMenuButtonTemplate")
         btnView:SetSize(80, 20)
         btnView:SetPoint("BOTTOMLEFT", 10, 5)
-        btnView:SetText("Ver Mapa")
+        btnView:SetText(L["View Map"])
         btnView:SetScript("OnClick", function()
             if FarmBuddyMapPreview then
                 FarmBuddyMapPreview:Show(importData)
@@ -546,7 +548,7 @@ BuildImportList = function()
         local btnRename = CreateFrame("Button", nil, row, "GameMenuButtonTemplate")
         btnRename:SetSize(80, 20)
         btnRename:SetPoint("LEFT", btnView, "RIGHT", 5, 0)
-        btnRename:SetText("Renomear")
+        btnRename:SetText(L["Rename"])
         btnRename:SetScript("OnClick", function()
             renameIndex = i
             renameEditBox:SetText(importData.name or "")
@@ -558,7 +560,7 @@ BuildImportList = function()
         local btnExport = CreateFrame("Button", nil, row, "GameMenuButtonTemplate")
         btnExport:SetSize(70, 20)
         btnExport:SetPoint("LEFT", btnRename, "RIGHT", 5, 0)
-        btnExport:SetText("Exportar")
+        btnExport:SetText(L["Export"])
         btnExport:SetScript("OnClick", function()
             ShowExportDialog(i)
         end)
@@ -567,12 +569,12 @@ BuildImportList = function()
         local btnDelete = CreateFrame("Button", nil, row, "GameMenuButtonTemplate")
         btnDelete:SetSize(70, 20)
         btnDelete:SetPoint("LEFT", btnExport, "RIGHT", 5, 0)
-        btnDelete:SetText("Excluir")
+        btnDelete:SetText(L["Delete"])
         btnDelete:SetScript("OnClick", function()
             StaticPopupDialogs["FARMBUDDY_DELETE_IMPORT"] = {
-                text = "Excluir import '" .. (importData.name or "") .. "'?",
-                button1 = "Sim",
-                button2 = "Não",
+                text = string.format(L["Delete import '%s'?"], importData.name or ""),
+                button1 = L["Yes"],
+                button2 = L["No"],
                 OnAccept = function()
                     FarmBuddyGatherImport:DeleteImport(i)
                     BuildImportList()

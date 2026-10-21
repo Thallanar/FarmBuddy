@@ -198,7 +198,7 @@ function FarmBuddyRouteMaker:SaveRoute(mapID, pulls, routeName, filter)
     if not profile.routes[mapID] then profile.routes[mapID] = {} end
 
     local entry = {
-        name = routeName or ("Rota " .. date("%d/%m %H:%M")),
+        name = routeName or (FarmBuddyL["Route"] .. " " .. date("%d/%m %H:%M")),
         pulls = {},
         filter = filter or "all",
         circular = true,

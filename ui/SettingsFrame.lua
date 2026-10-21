@@ -21,7 +21,7 @@ titleBar:SetPoint("TOP", settingsFrame, "TOP", 0, -6)
 
 local titleText = titleBar:CreateFontString(nil, "OVERLAY", "GameFontNormal")
 titleText:SetPoint("LEFT", 15, 0)
-titleText:SetText("Filters")
+titleText:SetText(FarmBuddyL["Filters"])
 
 -- Close Button
 local closeButton = CreateFrame("Button", nil, titleBar)

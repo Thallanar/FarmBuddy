@@ -18,7 +18,7 @@ function TrackerSettings:BuildCheckboxes(categories)
 
     local selectAllCB = CreateFrame("CheckButton", nil, self.scrollChild, "ChatConfigCheckButtonTemplate")
     selectAllCB:SetPoint("TOPLEFT", 10, -10)
-    selectAllCB.Text:SetText("Marcar todos")
+    selectAllCB.Text:SetText(FarmBuddyL["Select all"])
 
     local selecting = false -- flag para evitar loop de atualização
 
@@ -55,7 +55,7 @@ function TrackerSettings:BuildCheckboxes(categories)
 
         local label = header:CreateFontString(nil, "OVERLAY", "GameFontHighlight")
         label:SetPoint("LEFT", 0, 0)
-        label:SetText((expandedSections[sectionName] and "|cff00ff00[-]|r " or "|cffffaa00[+]|r ") .. sectionName)
+        label:SetText((expandedSections[sectionName] and "|cff00ff00[-]|r " or "|cffffaa00[+]|r ") .. FarmBuddyL[sectionName])
 
         header:SetScript("OnClick", function()
             expandedSections[sectionName] = not expandedSections[sectionName]
