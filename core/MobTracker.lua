@@ -23,16 +23,16 @@ FarmBuddyMobTracker.mobColors = {
     ["Dragonkin"] = { 0.9, 0.1, 0.1 },   -- vermelho
 }
 
--- Nomes em pt-BR dos tipos
-FarmBuddyMobTracker.creatureTypePT = {
-    ["Beast"]     = "Fera",
-    ["Humanoid"]  = "Humanoide",
-    ["Dragonkin"] = "Draconiano",
-    ["Aberration"] = "Aberração",
-    ["Elemental"]  = "Elemental",
-    ["Demon"]      = "Demônio",
-    ["Undead"]     = "Morto-vivo",
-    ["Giant"]      = "Gigante",
+-- Nomes localizados dos tipos
+FarmBuddyMobTracker.creatureTypeLabel = {
+    ["Beast"]      = FarmBuddyL["Beast"],
+    ["Humanoid"]   = FarmBuddyL["Humanoid"],
+    ["Dragonkin"]  = FarmBuddyL["Dragonkin"],
+    ["Aberration"] = FarmBuddyL["Aberration"],
+    ["Elemental"]  = FarmBuddyL["Elemental"],
+    ["Demon"]      = FarmBuddyL["Demon"],
+    ["Undead"]     = FarmBuddyL["Undead"],
+    ["Giant"]      = FarmBuddyL["Giant"],
 }
 
 -- Mapeamento reverso: nome localizado → nome inglês (para clientes não-EN)
@@ -75,11 +75,11 @@ function FarmBuddyMobTracker:ToEnglishCreatureType(localizedType)
     return self.creatureTypeToEnglish[localizedType]
 end
 
--- Nomes das profissões em pt-BR
-FarmBuddyMobTracker.professionNamePT = {
-    ["skinning"]  = "Couraria",
-    ["tailoring"] = "Alfaiataria",
-    ["all"]       = "Todos",
+-- Nomes localizados das profissões
+FarmBuddyMobTracker.professionLabel = {
+    ["skinning"]  = FarmBuddyL["Skinning"],
+    ["tailoring"] = FarmBuddyL["Tailoring"],
+    ["all"]       = FarmBuddyL["All"],
 }
 
 -- Frame de eventos para tracking
@@ -270,7 +270,7 @@ local function ExtractMobInfo(unitToken)
 
     return {
         npcID = npcID,
-        name = name or "Unknown",
+        name = name or FarmBuddyL["Unknown"],
         x = math.floor(x * 10 + 0.5) / 10, -- 1 casa decimal
         y = math.floor(y * 10 + 0.5) / 10,
         creatureType = creatureType,

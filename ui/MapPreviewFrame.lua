@@ -1,3 +1,5 @@
+local L = FarmBuddyL
+
 FarmBuddyMapPreview = {}
 
 -- Tamanho parecido com o mapa do jogo
@@ -58,11 +60,11 @@ sidebar:Hide()
 
 local sidebarTitle = sidebar:CreateFontString(nil, "OVERLAY", "GameFontNormal")
 sidebarTitle:SetPoint("TOP", sidebar, "TOP", 0, -14)
-sidebarTitle:SetText("Mobs nesta zona")
+sidebarTitle:SetText(L["Mobs in this zone"])
 
 local sidebarHelp = sidebar:CreateFontString(nil, "OVERLAY", "GameFontDisableSmall")
 sidebarHelp:SetPoint("TOP", sidebarTitle, "BOTTOM", 0, -2)
-sidebarHelp:SetText("Clique para isolar (multi)")
+sidebarHelp:SetText(L["Click to isolate (multi)"])
 
 -- Botão "Limpar seleção" (visível só quando há algo selecionado)
 local sidebarClearBtn = CreateFrame("Button", nil, sidebar)
@@ -87,7 +89,7 @@ local sidebarRowPool = {}
 -- Atualiza o texto/visibilidade do botão "Limpar seleção"
 local function UpdateSidebarHeader()
     if selectedCount > 0 then
-        sidebarClearText:SetText(string.format("Limpar seleção (%d)", selectedCount))
+        sidebarClearText:SetText(string.format(L["Clear selection (%d)"], selectedCount))
         sidebarClearBtn:Show()
     else
         sidebarClearBtn:Hide()
@@ -114,7 +116,7 @@ titleBar:SetPoint("TOP", frame, "TOP", 0, -6)
 
 local titleText = titleBar:CreateFontString(nil, "OVERLAY", "GameFontNormal")
 titleText:SetPoint("LEFT", 15, 0)
-titleText:SetText("Preview de Mapa")
+titleText:SetText(L["Map Preview"])
 
 -- Close Button
 local closeButton = CreateFrame("Button", nil, titleBar)
@@ -174,6 +176,21 @@ spawnOverlay:SetFrameLevel(pinContainer:GetFrameLevel() + 1)
 local spawnMarkerPool = {}
 local activeSpawnMarkers = {}
 
+-- Overlay para renderização de rotas (acima dos spawns)
+local routeOverlay = CreateFrame("Frame", nil, pinContainer)
+routeOverlay:SetAllPoints()
+routeOverlay:SetFrameLevel(spawnOverlay:GetFrameLevel() + 1)
+local routeLinePool = {}
+local routePullNumberPool = {}
+local activeRouteLines = {}
+local activeRoutePullNumbers = {}
+
+-- Estado do modo de edição de rota (pulls)
+local isRouteEditMode = false       -- true quando jogador está montando rota
+local editingPulls = {}             -- pulls em construção: { [1] = { mob1, mob2 }, [2] = { mob3 }, ... }
+local currentPullIndex = 1          -- pull ativo para adição
+local viewingRoute = nil            -- rota salva sendo visualizada (nil = modo normal)
+
 local function GetOrCreateSpawnMarker(index)
     if spawnMarkerPool[index] then
         return spawnMarkerPool[index]
@@ -207,6 +224,263 @@ local function ShowSpawnArea(spawnPoints)
         marker:Show()
         activeSpawnMarkers[i] = marker
     end
+end
+
+-- ============================
+-- RENDERIZAÇÃO DE ROTAS (SISTEMA DE PULLS)
+-- ============================
+
+-- Cores para cada pull (cicla se houver mais de 8 pulls)
+local PULL_COLORS = {
+    { 1.0, 0.82, 0.0 },   -- dourado
+    { 0.2, 0.8,  1.0 },   -- azul claro
+    { 0.0, 1.0,  0.4 },   -- verde
+    { 1.0, 0.4,  0.4 },   -- vermelho claro
+    { 1.0, 0.6,  0.0 },   -- laranja
+    { 0.8, 0.4,  1.0 },   -- roxo
+    { 0.0, 1.0,  1.0 },   -- ciano
+    { 1.0, 0.8,  0.6 },   -- bege
+}
+
+local function GetPullColor(pullIndex)
+    local c = PULL_COLORS[((pullIndex - 1) % #PULL_COLORS) + 1]
+    return c[1], c[2], c[3]
+end
+
+local function GetOrCreateRouteLine(index)
+    if routeLinePool[index] then
+        return routeLinePool[index]
+    end
+    local line = routeOverlay:CreateLine(nil, "ARTWORK")
+    line:SetThickness(2.5)
+    routeLinePool[index] = line
+    return line
+end
+
+local function GetOrCreatePullNumber(index)
+    if routePullNumberPool[index] then
+        return routePullNumberPool[index]
+    end
+    local numFrame = CreateFrame("Frame", nil, routeOverlay)
+    numFrame:SetSize(20, 20)
+
+    -- Fundo circular
+    local bg = numFrame:CreateTexture(nil, "BACKGROUND")
+    bg:SetTexture("Interface\\CHARACTERFRAME\\TempPortraitAlphaMask")
+    bg:SetAllPoints()
+    bg:SetVertexColor(0.1, 0.1, 0.1, 0.85)
+    numFrame.bg = bg
+
+    -- Número do pull
+    local text = numFrame:CreateFontString(nil, "OVERLAY", "GameFontNormalSmall")
+    text:SetPoint("CENTER", 0, 0)
+    text:SetFont(text:GetFont(), 11, "OUTLINE")
+    numFrame.text = text
+
+    -- Tooltip
+    numFrame:EnableMouse(true)
+    numFrame:SetScript("OnEnter", function(self)
+        self.bg:SetVertexColor(0.3, 0.3, 0.3, 0.95)
+        if self.tooltipText then
+            GameTooltip:SetOwner(self, "ANCHOR_RIGHT")
+            GameTooltip:AddLine(self.tooltipText)
+            if self.tooltipLines then
+                for _, line in ipairs(self.tooltipLines) do
+                    GameTooltip:AddLine(line, 0.8, 0.8, 0.8)
+                end
+            end
+            if self.tooltipHint then
+                GameTooltip:AddLine(self.tooltipHint, 0.5, 0.5, 0.5)
+            end
+            GameTooltip:Show()
+        end
+    end)
+    numFrame:SetScript("OnLeave", function(self)
+        self.bg:SetVertexColor(0.1, 0.1, 0.1, 0.85)
+        GameTooltip:Hide()
+    end)
+
+    routePullNumberPool[index] = numFrame
+    return numFrame
+end
+
+local function HideRoute()
+    for _, line in ipairs(activeRouteLines) do
+        line:Hide()
+    end
+    wipe(activeRouteLines)
+    for _, num in ipairs(activeRoutePullNumbers) do
+        num:Hide()
+    end
+    wipe(activeRoutePullNumbers)
+end
+
+-- Forward declare
+local RenderPullRoute
+local UpdateRouteButtons
+local UpdateSidebarForPulls
+
+--- Renderiza a rota de pulls: linhas entre centróides + número em cada centróide.
+--- Funciona tanto para editingPulls (modo edição) quanto viewingRoute (modo visualização).
+RenderPullRoute = function(pulls, circular)
+    HideRoute()
+    if not pulls or #pulls == 0 then return end
+
+    local containerW = pinContainer:GetWidth()
+    local containerH = pinContainer:GetHeight()
+
+    -- Calcula centróide de cada pull
+    local centroids = {}
+    for i, pull in ipairs(pulls) do
+        if #pull > 0 then
+            local c = FarmBuddyRouteMaker:PullCentroid(pull)
+            table.insert(centroids, { x = c.x, y = c.y, pullIndex = i, pull = pull })
+        end
+    end
+
+    if #centroids == 0 then return end
+
+    -- Desenha linhas entre centróides consecutivos
+    if #centroids >= 2 then
+        local lineCount = circular and #centroids or (#centroids - 1)
+        for i = 1, lineCount do
+            local from = centroids[i]
+            local to = centroids[(i % #centroids) + 1]
+            local line = GetOrCreateRouteLine(i)
+
+            local fx = (from.x / 100) * containerW
+            local fy = (from.y / 100) * containerH
+            local tx = (to.x / 100) * containerW
+            local ty = (to.y / 100) * containerH
+
+            line:SetStartPoint("TOPLEFT", pinContainer, fx, -fy)
+            line:SetEndPoint("TOPLEFT", pinContainer, tx, -ty)
+
+            local r, g, b = GetPullColor(from.pullIndex)
+            line:SetColorTexture(r, g, b, 0.7)
+            line:Show()
+            activeRouteLines[i] = line
+        end
+    end
+
+    -- Desenha número do pull em cada centróide
+    for idx, c in ipairs(centroids) do
+        local num = GetOrCreatePullNumber(idx)
+        num:ClearAllPoints()
+        local px = (c.x / 100) * containerW
+        local py = (c.y / 100) * containerH
+        num:SetPoint("CENTER", pinContainer, "TOPLEFT", px, -py)
+
+        local pullNum = c.pullIndex
+        num.text:SetText(tostring(pullNum))
+        local r, g, b = GetPullColor(pullNum)
+        num.text:SetTextColor(r, g, b)
+
+        -- Tooltip com lista de mobs do pull
+        num.tooltipText = string.format("|cffffd100Pull #%d|r  (%d mobs)", pullNum, #c.pull)
+        num.tooltipLines = {}
+        for _, mob in ipairs(c.pull) do
+            table.insert(num.tooltipLines, "  " .. (mob.name or ("NPC " .. tostring(mob.npcID))))
+        end
+        if isRouteEditMode then
+            num.tooltipHint = L["Right-click to remove pull"]
+        end
+
+        -- Right-click para remover pull (só no modo edição)
+        num:SetScript("OnMouseDown", function(self, button)
+            if button == "RightButton" and isRouteEditMode then
+                local pi = self.pullIndex
+                if pi and editingPulls[pi] then
+                    table.remove(editingPulls, pi)
+                    -- Ajusta currentPullIndex se necessário
+                    if currentPullIndex > #editingPulls then
+                        currentPullIndex = math.max(1, #editingPulls + 1)
+                    end
+                    RenderPullRoute(editingPulls, true)
+                    if UpdateRouteButtons then UpdateRouteButtons() end
+                    -- Re-renderiza os pins pra atualizar badges
+                    if currentMapID and currentImportData then
+                        RenderMobPinsDispatch(currentMapID, currentImportData, currentProfessionFilter, currentDisplayMode)
+                    end
+                end
+            end
+        end)
+        num.pullIndex = pullNum
+
+        num:Show()
+        activeRoutePullNumbers[idx] = num
+    end
+end
+
+--- Verifica se um mob está em algum pull (retorna pullIndex ou nil)
+local function FindMobInPulls(pulls, mob)
+    if not pulls then return nil end
+    for pullIdx, pull in ipairs(pulls) do
+        for mobIdx, m in ipairs(pull) do
+            if m.npcID == mob.npcID
+                and math.abs(m.x - mob.x) < 0.2
+                and math.abs(m.y - mob.y) < 0.2 then
+                return pullIdx, mobIdx
+            end
+        end
+    end
+    return nil
+end
+
+--- Adiciona um mob ao pull atual durante edição
+local function AddMobToPull(mob)
+    if not isRouteEditMode then return end
+
+    -- Verifica se já está em algum pull
+    local existingPull = FindMobInPulls(editingPulls, mob)
+    if existingPull then return end
+
+    -- Garante que o pull atual existe
+    if not editingPulls[currentPullIndex] then
+        editingPulls[currentPullIndex] = {}
+    end
+
+    table.insert(editingPulls[currentPullIndex], {
+        npcID = mob.npcID,
+        x = mob.x,
+        y = mob.y,
+        name = mob.name,
+        displayID = mob.displayID,
+        creatureType = mob.creatureType,
+    })
+
+    -- Re-renderiza rota, pins e sidebar
+    RenderPullRoute(editingPulls, true)
+    if currentMapID and currentImportData then
+        RenderMobPinsDispatch(currentMapID, currentImportData, currentProfessionFilter, currentDisplayMode)
+    end
+    if UpdateSidebarForPulls then UpdateSidebarForPulls(editingPulls) end
+    if UpdateRouteButtons then UpdateRouteButtons() end
+end
+
+--- Remove um mob de qualquer pull durante edição
+local function RemoveMobFromPull(mob)
+    if not isRouteEditMode then return end
+
+    local pullIdx, mobIdx = FindMobInPulls(editingPulls, mob)
+    if not pullIdx then return end
+
+    table.remove(editingPulls[pullIdx], mobIdx)
+
+    -- Remove pull se ficou vazio
+    if #editingPulls[pullIdx] == 0 then
+        table.remove(editingPulls, pullIdx)
+        if currentPullIndex > #editingPulls then
+            currentPullIndex = math.max(1, #editingPulls + 1)
+        end
+    end
+
+    RenderPullRoute(editingPulls, true)
+    if currentMapID and currentImportData then
+        RenderMobPinsDispatch(currentMapID, currentImportData, currentProfessionFilter, currentDisplayMode)
+    end
+    if UpdateSidebarForPulls then UpdateSidebarForPulls(editingPulls) end
+    if UpdateRouteButtons then UpdateRouteButtons() end
 end
 
 -- Clamp pan para não ultrapassar limites do mapa
@@ -447,13 +721,13 @@ local function LoadMapTextures(mapID)
 
     local ok, artID = pcall(C_Map.GetMapArtID, mapID)
     if not ok or not artID then
-        statusText:SetText("|cffff6600Mapa não disponível para visualização.|r")
+        statusText:SetText("|cffff6600" .. L["Map not available for preview."] .. "|r")
         return false
     end
 
     local okLayers, layers = pcall(C_Map.GetMapArtLayers, mapID)
     if not okLayers or not layers or #layers == 0 then
-        statusText:SetText("|cffff6600Texturas do mapa não encontradas.|r")
+        statusText:SetText("|cffff6600" .. L["Map textures not found."] .. "|r")
         return false
     end
 
@@ -462,7 +736,7 @@ local function LoadMapTextures(mapID)
     local totalHeight = layer.layerHeight or layer.height or 0
 
     if totalWidth == 0 or totalHeight == 0 then
-        statusText:SetText("|cffff6600Dimensões do mapa inválidas.|r")
+        statusText:SetText("|cffff6600" .. L["Invalid map dimensions."] .. "|r")
         return false
     end
 
@@ -503,7 +777,7 @@ local function LoadMapTextures(mapID)
 
     local okTex, textures = pcall(C_Map.GetMapArtLayerTextures, mapID, 1)
     if not okTex or not textures or #textures == 0 then
-        statusText:SetText("|cffff6600Texturas do mapa não carregadas.|r")
+        statusText:SetText("|cffff6600" .. L["Map textures not loaded."] .. "|r")
         return false
     end
 
@@ -564,15 +838,15 @@ local function LoadMapTextures(mapID)
     return true
 end
 
--- Nomes em pt-BR dos tipos de node
+-- Nomes localizados dos tipos de node
 local nodeTypePT = {
-    ["Herb"] = "Erva",
-    ["Mine"] = "Minério",
-    ["Fish"] = "Pesca",
-    ["Gas"] = "Gás",
-    ["Treasure"] = "Tesouro",
-    ["Archaeology"] = "Arqueologia",
-    ["Logging"] = "Madeira",
+    ["Herb"] = L["Herb"],
+    ["Mine"] = L["Ore"],
+    ["Fish"] = L["Fishing"],
+    ["Gas"] = L["Gas"],
+    ["Treasure"] = L["Treasure"],
+    ["Archaeology"] = L["Archaeology"],
+    ["Logging"] = L["Wood"],
 }
 
 -- ============================
@@ -707,21 +981,81 @@ local function SetupMobPin(pin, mob, displayMode)
         pin.icon:SetTexCoord(0.08, 0.92, 0.08, 0.92)
     end
 
+    -- Anel colorido de pull (cria sob demanda)
+    if not pin.pullRing then
+        local ring = pin:CreateTexture(nil, "BACKGROUND")
+        ring:SetTexture("Interface\\CHARACTERFRAME\\TempPortraitAlphaMask")
+        ring:SetPoint("CENTER")
+        pin.pullRing = ring
+    end
+
+    -- Número pequeno do pull (canto, discreto)
+    if not pin.pullNum then
+        local pnum = pin:CreateFontString(nil, "OVERLAY")
+        pnum:SetFont("Fonts\\FRIZQT__.TTF", 8, "OUTLINE")
+        pnum:SetPoint("BOTTOMRIGHT", pin, "BOTTOMRIGHT", 4, -4)
+        pin.pullNum = pnum
+    end
+
+    -- Verifica se o mob está num pull
+    local activePulls = isRouteEditMode and editingPulls or (viewingRoute and viewingRoute.pulls)
+    local pullIdx = activePulls and FindMobInPulls(activePulls, mob) or nil
+    if pullIdx then
+        local r, g, b = GetPullColor(pullIdx)
+        -- Anel: círculo maior e semitransparente ao redor do pin
+        local pinW = pin:GetWidth()
+        local ringSize = pinW + 10
+        pin.pullRing:SetSize(ringSize, ringSize)
+        pin.pullRing:SetVertexColor(r, g, b, 0.45)
+        pin.pullRing:Show()
+        -- Número discreto
+        pin.pullNum:SetText(tostring(pullIdx))
+        pin.pullNum:SetTextColor(r, g, b)
+        pin.pullNum:Show()
+    else
+        pin.pullRing:Hide()
+        pin.pullNum:Hide()
+    end
+
     -- Tooltip
-    local typePT = FarmBuddyMobTracker.creatureTypePT[mob.creatureType] or mob.creatureType
+    local typePT = FarmBuddyMobTracker.creatureTypeLabel[mob.creatureType] or mob.creatureType
     local profLabel = ""
     if mob.skinnable then
-        profLabel = "|cffcc6600Couraria|r"
+        profLabel = "|cffcc6600" .. L["Skinning"] .. "|r"
     elseif mob.clothDropper then
-        profLabel = "|cff9933ccAlfaiataria|r"
+        profLabel = "|cff9933cc" .. L["Tailoring"] .. "|r"
     end
 
     pin.tooltipText = mob.name or "Mob"
     pin.tooltipSubText = typePT .. (profLabel ~= "" and ("  -  " .. profLabel) or "")
 
-    if mob.trackedAt then
-        pin.tooltipSubText = pin.tooltipSubText .. "\n|cff00ff00Rastreado|r"
+    if pullIdx then
+        local r, g, b = GetPullColor(pullIdx)
+        pin.tooltipSubText = pin.tooltipSubText ..
+            string.format("\n|cff%02x%02x%02xPull #%d|r", r*255, g*255, b*255, pullIdx)
     end
+
+    if mob.trackedAt then
+        pin.tooltipSubText = pin.tooltipSubText .. "\n|cff00ff00" .. L["Tracked"] .. "|r"
+    end
+
+    if isRouteEditMode then
+        pin.tooltipSubText = pin.tooltipSubText ..
+            "\n|cff888888" .. string.format(L["Click = add pull %d  |  Right-click = remove"], currentPullIndex) .. "|r"
+    end
+
+    -- Guarda referência do mob no pin pra click handler
+    pin.mobData = mob
+
+    -- Click handlers para modo de edição de rota
+    pin:SetScript("OnMouseDown", function(self, button)
+        if not isRouteEditMode then return end
+        if button == "LeftButton" and self.mobData then
+            AddMobToPull(self.mobData)
+        elseif button == "RightButton" and self.mobData then
+            RemoveMobFromPull(self.mobData)
+        end
+    end)
 end
 
 local expandedPinIndex = 0
@@ -875,6 +1209,239 @@ local function UpdateSidebar(mapID, mobData, filter)
 end
 
 -- ============================
+-- PAINEL DE PULLS (lado esquerdo, independente da sidebar de mobs)
+-- ============================
+
+local PULL_PANEL_WIDTH = 180
+local PULL_ROW_HEIGHT = 22
+local PULL_MOB_ROW_HEIGHT = 18
+
+-- Painel principal
+local pullPanel = CreateFrame("Frame", nil, frame, BackdropTemplateMixin and "BackdropTemplate")
+pullPanel:SetSize(PULL_PANEL_WIDTH, FRAME_HEIGHT)
+pullPanel:SetPoint("TOPRIGHT", frame, "TOPLEFT", 4, 0)
+pullPanel:SetBackdrop({
+    bgFile = "Interface\\DialogFrame\\UI-DialogBox-Background",
+    edgeFile = "Interface\\DialogFrame\\UI-DialogBox-Border",
+    tile = true, tileSize = 32, edgeSize = 32,
+    insets = { left = 11, right = 12, top = 12, bottom = 11 }
+})
+pullPanel:Hide()
+
+local pullPanelTitle = pullPanel:CreateFontString(nil, "OVERLAY", "GameFontNormal")
+pullPanelTitle:SetPoint("TOP", pullPanel, "TOP", 0, -14)
+pullPanelTitle:SetText("Pulls")
+
+local pullPanelHelp = pullPanel:CreateFontString(nil, "OVERLAY", "GameFontDisableSmall")
+pullPanelHelp:SetPoint("TOP", pullPanelTitle, "BOTTOM", 0, -2)
+pullPanelHelp:SetText(L["Click mobs on the map"])
+
+local pullPanelScroll = CreateFrame("ScrollFrame", nil, pullPanel, "UIPanelScrollFrameTemplate")
+pullPanelScroll:SetPoint("TOPLEFT", 14, -42)
+pullPanelScroll:SetPoint("BOTTOMRIGHT", -30, 14)
+
+local pullPanelContent = CreateFrame("Frame", nil, pullPanelScroll)
+pullPanelContent:SetSize(PULL_PANEL_WIDTH - 44, 1)
+pullPanelScroll:SetScrollChild(pullPanelContent)
+
+local pullRowPool = {}
+local pullMobRowPool = {}
+
+local function GetOrCreatePullRow(index)
+    if pullRowPool[index] then return pullRowPool[index] end
+
+    local row = CreateFrame("Button", nil, pullPanelContent)
+    row:SetSize(pullPanelContent:GetWidth(), PULL_ROW_HEIGHT)
+
+    -- Barra de cor do pull (esquerda)
+    local colorBar = row:CreateTexture(nil, "BACKGROUND")
+    colorBar:SetSize(4, PULL_ROW_HEIGHT)
+    colorBar:SetPoint("LEFT", 0, 0)
+    row.colorBar = colorBar
+
+    -- Highlight
+    local hl = row:CreateTexture(nil, "BACKGROUND")
+    hl:SetPoint("TOPLEFT", colorBar, "TOPRIGHT", 0, 0)
+    hl:SetPoint("BOTTOMRIGHT")
+    hl:SetColorTexture(1, 1, 1, 0.08)
+    hl:Hide()
+    row.highlight = hl
+
+    -- Texto do pull
+    local label = row:CreateFontString(nil, "OVERLAY", "GameFontNormalSmall")
+    label:SetPoint("LEFT", colorBar, "RIGHT", 6, 0)
+    label:SetJustifyH("LEFT")
+    row.label = label
+
+    -- Contagem de mobs
+    local count = row:CreateFontString(nil, "OVERLAY", "GameFontNormalSmall")
+    count:SetPoint("RIGHT", row, "RIGHT", -22, 0)
+    count:SetTextColor(0.7, 0.7, 0.7)
+    row.countText = count
+
+    -- Botão X para deletar
+    local delBtn = CreateFrame("Button", nil, row)
+    delBtn:SetSize(14, 14)
+    delBtn:SetPoint("RIGHT", row, "RIGHT", -4, 0)
+    local delText = delBtn:CreateFontString(nil, "OVERLAY", "GameFontNormalSmall")
+    delText:SetAllPoints()
+    delText:SetText("|cffff4444x|r")
+    delBtn.text = delText
+    delBtn:SetScript("OnEnter", function(self) self.text:SetText("|cffff0000X|r") end)
+    delBtn:SetScript("OnLeave", function(self) self.text:SetText("|cffff4444x|r") end)
+    row.delBtn = delBtn
+
+    row:SetScript("OnEnter", function(self)
+        if not self.isActive then
+            self.highlight:SetColorTexture(1, 1, 1, 0.08)
+            self.highlight:Show()
+        end
+    end)
+    row:SetScript("OnLeave", function(self)
+        if not self.isActive then
+            self.highlight:Hide()
+        end
+    end)
+
+    pullRowPool[index] = row
+    return row
+end
+
+local function GetOrCreatePullMobRow(index)
+    if pullMobRowPool[index] then return pullMobRowPool[index] end
+
+    local row = CreateFrame("Frame", nil, pullPanelContent)
+    row:SetSize(pullPanelContent:GetWidth(), PULL_MOB_ROW_HEIGHT)
+
+    -- Portrait pequeno
+    local portrait = row:CreateTexture(nil, "ARTWORK")
+    portrait:SetSize(14, 14)
+    portrait:SetPoint("LEFT", 14, 0)
+    row.portrait = portrait
+
+    local pmask = row:CreateMaskTexture()
+    pmask:SetTexture("Interface\\CHARACTERFRAME\\TempPortraitAlphaMask", "CLAMPTOBLACKADDITIVE", "CLAMPTOBLACKADDITIVE")
+    pmask:SetAllPoints(portrait)
+    portrait:AddMaskTexture(pmask)
+
+    -- Nome do mob
+    local name = row:CreateFontString(nil, "OVERLAY", "GameFontDisableSmall")
+    name:SetPoint("LEFT", portrait, "RIGHT", 4, 0)
+    name:SetPoint("RIGHT", row, "RIGHT", -4, 0)
+    name:SetJustifyH("LEFT")
+    name:SetWordWrap(false)
+    row.nameText = name
+
+    pullMobRowPool[index] = row
+    return row
+end
+
+UpdateSidebarForPulls = function(pulls)
+    -- Esconde rows anteriores
+    for _, row in pairs(pullRowPool) do row:Hide() end
+    for _, row in pairs(pullMobRowPool) do row:Hide() end
+
+    if not pulls or #pulls == 0 then
+        pullPanelHelp:SetText(L["Click mobs on the map"])
+        pullPanelContent:SetHeight(1)
+        pullPanel:Show()
+        return
+    end
+
+    if isRouteEditMode then
+        pullPanelHelp:SetText(L["Click mobs on the map"])
+    else
+        pullPanelHelp:SetText(L["Viewing saved route"])
+    end
+
+    local yOffset = 0
+    local pullRowIdx = 0
+    local mobRowIdx = 0
+
+    for pullNum, pull in ipairs(pulls) do
+        pullRowIdx = pullRowIdx + 1
+        local pRow = GetOrCreatePullRow(pullRowIdx)
+        local r, g, b = GetPullColor(pullNum)
+        pRow.colorBar:SetColorTexture(r, g, b, 1)
+        pRow.label:SetText(string.format("Pull #%d", pullNum))
+        pRow.label:SetTextColor(r, g, b)
+        pRow.countText:SetText(#pull .. " mobs")
+
+        -- Destaque do pull ativo
+        if isRouteEditMode and pullNum == currentPullIndex then
+            pRow.isActive = true
+            pRow.highlight:SetColorTexture(r, g, b, 0.2)
+            pRow.highlight:Show()
+        else
+            pRow.isActive = false
+            pRow.highlight:Hide()
+        end
+
+        if isRouteEditMode then
+            pRow.delBtn:Show()
+
+            -- Clique no pull = selecionar como ativo
+            pRow:SetScript("OnClick", function()
+                currentPullIndex = pullNum
+                UpdateSidebarForPulls(editingPulls)
+                if UpdateRouteButtons then UpdateRouteButtons() end
+            end)
+
+            pRow.delBtn:SetScript("OnClick", function()
+                table.remove(editingPulls, pullNum)
+                if currentPullIndex > #editingPulls then
+                    currentPullIndex = math.max(1, #editingPulls + 1)
+                end
+                RenderPullRoute(editingPulls, true)
+                UpdateSidebarForPulls(editingPulls)
+                if currentMapID and currentImportData then
+                    RenderMobPinsDispatch(currentMapID, currentImportData, currentProfessionFilter, currentDisplayMode)
+                end
+                if UpdateRouteButtons then UpdateRouteButtons() end
+            end)
+        else
+            pRow.delBtn:Hide()
+            pRow:SetScript("OnClick", nil)
+        end
+
+        pRow:ClearAllPoints()
+        pRow:SetPoint("TOPLEFT", pullPanelContent, "TOPLEFT", 0, -yOffset)
+        pRow:SetPoint("RIGHT", pullPanelContent, "RIGHT", 0, 0)
+        pRow:Show()
+        yOffset = yOffset + PULL_ROW_HEIGHT
+
+        for _, mob in ipairs(pull) do
+            mobRowIdx = mobRowIdx + 1
+            local mRow = GetOrCreatePullMobRow(mobRowIdx)
+
+            local displayID = mob.displayID
+            if not displayID and mob.npcID and FarmBuddyMobTracker then
+                displayID = FarmBuddyMobTracker:GetDisplayID(mob.npcID)
+            end
+            if displayID then
+                pcall(SetPortraitTextureFromCreatureDisplayID, mRow.portrait, displayID)
+                mRow.portrait:Show()
+            else
+                mRow.portrait:Hide()
+            end
+
+            mRow.nameText:SetText(mob.name or ("NPC " .. tostring(mob.npcID)))
+
+            mRow:ClearAllPoints()
+            mRow:SetPoint("TOPLEFT", pullPanelContent, "TOPLEFT", 0, -yOffset)
+            mRow:SetPoint("RIGHT", pullPanelContent, "RIGHT", 0, 0)
+            mRow:Show()
+            yOffset = yOffset + PULL_MOB_ROW_HEIGHT
+        end
+
+        yOffset = yOffset + 4
+    end
+
+    pullPanelContent:SetHeight(math.max(1, yOffset))
+    pullPanel:Show()
+end
+
+-- ============================
 -- RENDER AGRUPADO (1 pin por npcID no centróide)
 -- ============================
 
@@ -944,7 +1511,7 @@ local function RenderGroupedMobPins(mapID, mobData, filter, displayMode)
         epin.badge:SetText(tostring(g.count))
         epin.badge:Show()
 
-        local typePT = FarmBuddyMobTracker.creatureTypePT[g.mob.creatureType] or g.mob.creatureType
+        local typePT = FarmBuddyMobTracker.creatureTypeLabel[g.mob.creatureType] or g.mob.creatureType
         epin.tooltipText = string.format("%s  x%d", g.mob.name or "Mob", g.count)
         epin.tooltipSubText = typePT
         epin.spawnPoints = g.spawns
@@ -982,10 +1549,43 @@ local function RenderIsolatedSpawns(mapID, mobData, displayMode, npcIDSet)
     end
 end
 
--- Dispatch: se há mobs isolados, renderiza spawns individuais deles;
--- caso contrário, render agrupado (1 pin por npcID no centróide).
+-- Renderiza TODOS os spawns individuais filtrados (para modo edição/visualização de rota)
+local function RenderAllFilteredSpawns(mapID, mobData, filter, displayMode)
+    HideAllPins()
+    expandedPinIndex = 0
+
+    if not mobData or not mobData.mobs or not mobData.mobs[mapID] then
+        return
+    end
+
+    local containerW = pinContainer:GetWidth()
+    local containerH = pinContainer:GetHeight()
+    local pinIndex = 0
+
+    for _, mob in ipairs(mobData.mobs[mapID]) do
+        if FarmBuddyMobTracker:MatchesFilter(mob, filter) then
+            pinIndex = pinIndex + 1
+            local pin = GetOrCreateMobPin(pinIndex)
+            local px = (mob.x / 100) * containerW
+            local py = (mob.y / 100) * containerH
+            pin:ClearAllPoints()
+            pin:SetPoint("CENTER", pinContainer, "TOPLEFT", px, -py)
+            SetupMobPin(pin, mob, displayMode)
+            pin:Show()
+            table.insert(activePins, pin)
+        end
+    end
+end
+
+-- Dispatch: escolhe o render certo baseado no estado atual.
 RenderMobPinsDispatch = function(mapID, mobData, filter, displayMode)
-    if selectedCount > 0 then
+    if (isRouteEditMode or viewingRoute) and selectedCount > 0 then
+        -- Modo rota + filtro isolado ativo: spawns individuais dos selecionados
+        RenderIsolatedSpawns(mapID, mobData, displayMode, selectedNpcIDs)
+    elseif isRouteEditMode or viewingRoute then
+        -- Modo rota sem filtro: todos os spawns individuais
+        RenderAllFilteredSpawns(mapID, mobData, filter, displayMode)
+    elseif selectedCount > 0 then
         RenderIsolatedSpawns(mapID, mobData, displayMode, selectedNpcIDs)
     else
         RenderGroupedMobPins(mapID, mobData, filter, displayMode)
@@ -1018,8 +1618,8 @@ local function UpdateInfoBar(data, mapID)
         end
 
         local mapCount = data.mapList and #data.mapList or 0
-        local profName = FarmBuddyMobTracker.professionNamePT[currentProfessionFilter] or currentProfessionFilter
-        infoText:SetText(string.format("%d mobs neste mapa  |  %d mapas no total  |  Filtro: %s",
+        local profName = FarmBuddyMobTracker.professionLabel[currentProfessionFilter] or currentProfessionFilter
+        infoText:SetText(string.format(L["%d mobs on this map  |  %d maps total  |  Filter: %s"],
             filteredCount, mapCount, profName))
     else
         local nodeCount = 0
@@ -1028,8 +1628,287 @@ local function UpdateInfoBar(data, mapID)
         end
 
         local mapCount = data.mapList and #data.mapList or 0
-        infoText:SetText(string.format("%d nodes neste mapa  |  %d mapas no total  |  %d nodes total",
+        infoText:SetText(string.format(L["%d nodes on this map  |  %d maps total  |  %d nodes total"],
             nodeCount, mapCount, data.totalNodes or 0))
+    end
+end
+
+-- ============================
+-- BOTÕES DE ROTA — SISTEMA DE PULLS (modo Mobs)
+-- ============================
+
+-- Label que mostra o pull atual durante edição
+local pullLabel = frame:CreateFontString(nil, "OVERLAY", "GameFontNormal")
+pullLabel:SetPoint("BOTTOMLEFT", frame, "BOTTOMLEFT", 20, 38)
+pullLabel:SetTextColor(1, 0.82, 0)
+pullLabel:Hide()
+
+-- Botão "Editar Rota" — entra no modo edição
+local btnEditRoute = CreateFrame("Button", nil, frame, "GameMenuButtonTemplate")
+btnEditRoute:SetSize(100, 22)
+btnEditRoute:SetPoint("BOTTOMRIGHT", frame, "BOTTOMRIGHT", -20, 12)
+btnEditRoute:SetText(L["Edit Route"])
+btnEditRoute:Hide()
+
+-- Botão "Próximo Pull" — avança o pull durante edição
+local btnNextPull = CreateFrame("Button", nil, frame, "GameMenuButtonTemplate")
+btnNextPull:SetSize(100, 22)
+btnNextPull:SetPoint("RIGHT", btnEditRoute, "LEFT", -4, 0)
+btnNextPull:SetText(L["Next Pull"])
+btnNextPull:Hide()
+
+-- Botão "Otimizar" — reordena pulls pelo algoritmo
+local btnOptimize = CreateFrame("Button", nil, frame, "GameMenuButtonTemplate")
+btnOptimize:SetSize(80, 22)
+btnOptimize:SetPoint("RIGHT", btnNextPull, "LEFT", -4, 0)
+btnOptimize:SetText(L["Optimize"])
+btnOptimize:Hide()
+
+-- Botão "Salvar" — salva a rota
+local btnSaveRoute = CreateFrame("Button", nil, frame, "GameMenuButtonTemplate")
+btnSaveRoute:SetSize(70, 22)
+btnSaveRoute:SetPoint("RIGHT", btnOptimize, "LEFT", -4, 0)
+btnSaveRoute:SetText(L["Save"])
+btnSaveRoute:Hide()
+
+-- Botão "Cancelar" / "Fechar" — sai do modo edição ou visualização
+local btnCancelRoute = CreateFrame("Button", nil, frame, "GameMenuButtonTemplate")
+btnCancelRoute:SetSize(80, 22)
+btnCancelRoute:SetPoint("RIGHT", btnSaveRoute, "LEFT", -4, 0)
+btnCancelRoute:SetText(L["Cancel"])
+btnCancelRoute:Hide()
+
+-- Dropdown para rotas salvas
+local routeDropdown = CreateFrame("Frame", "FarmBuddyRouteDropdown", frame, "UIDropDownMenuTemplate")
+routeDropdown:SetPoint("RIGHT", btnEditRoute, "LEFT", 10, 0)
+routeDropdown:Hide()
+
+local function InitializeRouteDropdown(self, level)
+    if level ~= 1 then return end
+    if not currentMapID or not FarmBuddyRouteMaker then return end
+
+    local routes = FarmBuddyRouteMaker:GetRoutes(currentMapID)
+
+    if #routes == 0 then
+        local info = UIDropDownMenu_CreateInfo()
+        info.text = L["No saved routes"]
+        info.disabled = true
+        info.notCheckable = true
+        UIDropDownMenu_AddButton(info, level)
+        return
+    end
+
+    for i, route in ipairs(routes) do
+        local mobCount = FarmBuddyRouteMaker:CountMobsInRoute(route)
+        local info = UIDropDownMenu_CreateInfo()
+        info.text = string.format("%s (%d pulls, %d mobs)", route.name, #route.pulls, mobCount)
+        info.value = i
+        info.notCheckable = true
+        info.func = function()
+            -- Visualizar rota salva
+            isRouteEditMode = false
+            viewingRoute = route
+            UIDropDownMenu_SetText(routeDropdown, route.name)
+            CloseDropDownMenus()
+
+            -- Renderiza só os mobs dos pulls + linhas
+            RenderPullRoute(route.pulls, route.circular ~= false)
+            if currentMapID and currentImportData then
+                RenderMobPinsDispatch(currentMapID, currentImportData, currentProfessionFilter, currentDisplayMode)
+            end
+            if UpdateSidebarForPulls then UpdateSidebarForPulls(route.pulls) end
+            if UpdateRouteButtons then UpdateRouteButtons() end
+        end
+
+        info.tooltipTitle = route.name
+        info.tooltipText = string.format(L["Created on %s\nFilter: %s\n%d pulls, %d mobs\n\nShift+Click to delete"],
+            route.createdAt or "?", FarmBuddyMobTracker.professionLabel[route.filter] or route.filter or "?", #route.pulls, mobCount)
+        info.tooltipOnButton = true
+
+        UIDropDownMenu_AddButton(info, level)
+    end
+end
+
+UIDropDownMenu_Initialize(routeDropdown, InitializeRouteDropdown)
+UIDropDownMenu_SetWidth(routeDropdown, 160)
+UIDropDownMenu_SetText(routeDropdown, L["Saved routes"])
+
+-- === Lógica dos botões ===
+
+-- Entrar no modo edição
+btnEditRoute:SetScript("OnClick", function()
+    if isRouteEditMode then return end
+
+    isRouteEditMode = true
+    viewingRoute = nil
+    wipe(editingPulls)
+    currentPullIndex = 1
+
+    -- Limpa seleção isolada (o dispatch agora renderiza tudo via RenderAllFilteredSpawns)
+    wipe(selectedNpcIDs)
+    selectedCount = 0
+    UpdateSidebarHeader()
+
+    if currentMapID and currentImportData then
+        RenderMobPinsDispatch(currentMapID, currentImportData, currentProfessionFilter, currentDisplayMode)
+    end
+
+    UpdateSidebarForPulls(editingPulls)
+    UpdateRouteButtons()
+    print("|cff00ff00[FarmBuddy]|r " .. L["Route edit mode. Click mobs to add them to the current pull."])
+end)
+
+-- Próximo pull
+btnNextPull:SetScript("OnClick", function()
+    if not isRouteEditMode then return end
+
+    -- Só avança se o pull atual tem pelo menos 1 mob
+    if editingPulls[currentPullIndex] and #editingPulls[currentPullIndex] > 0 then
+        currentPullIndex = currentPullIndex + 1
+        UpdateRouteButtons()
+        local r, g, b = GetPullColor(currentPullIndex)
+        print("|cff00ff00[FarmBuddy]|r " .. string.format(L["Pull #%d active."], currentPullIndex))
+    else
+        print("|cffff6600[FarmBuddy]|r " .. L["Add at least 1 mob to the current pull before moving on."])
+    end
+end)
+
+-- Otimizar ordem dos pulls
+btnOptimize:SetScript("OnClick", function()
+    if not isRouteEditMode or #editingPulls < 2 then return end
+
+    local optimized, distance = FarmBuddyRouteMaker:OptimizePullOrder(editingPulls, true)
+    wipe(editingPulls)
+    for i, pull in ipairs(optimized) do
+        editingPulls[i] = pull
+    end
+    currentPullIndex = #editingPulls + 1
+
+    RenderPullRoute(editingPulls, true)
+    if currentMapID and currentImportData then
+        RenderMobPinsDispatch(currentMapID, currentImportData, currentProfessionFilter, currentDisplayMode)
+    end
+    UpdateSidebarForPulls(editingPulls)
+    UpdateRouteButtons()
+
+    print("|cff00ff00[FarmBuddy]|r " .. string.format(L["Pulls reordered! Optimized distance: %.1f"], distance))
+end)
+
+-- Salvar rota
+btnSaveRoute:SetScript("OnClick", function()
+    if not isRouteEditMode or #editingPulls == 0 then return end
+    if not currentMapID or not FarmBuddyRouteMaker then return end
+
+    local mapInfo = C_Map.GetMapInfo(currentMapID)
+    local zoneName = mapInfo and mapInfo.name or string.format(L["Map %d"], currentMapID)
+    local routeName = zoneName .. " — " .. date("%d/%m %H:%M")
+
+    local ok = FarmBuddyRouteMaker:SaveRoute(currentMapID, editingPulls, routeName, currentProfessionFilter)
+    if ok then
+        local totalMobs = 0
+        for _, pull in ipairs(editingPulls) do totalMobs = totalMobs + #pull end
+        print("|cff00ff00[FarmBuddy]|r " .. string.format(L["Route \"%s\" saved! (%d pulls, %d mobs)"],
+            routeName, #editingPulls, totalMobs))
+        UIDropDownMenu_SetText(routeDropdown, routeName)
+    end
+
+    -- Sai do modo edição
+    isRouteEditMode = false
+    wipe(editingPulls)
+    currentPullIndex = 1
+    HideRoute()
+    wipe(selectedNpcIDs)
+    selectedCount = 0
+    UpdateSidebarHeader()
+    if currentMapID and currentImportData then
+        RenderMobPinsDispatch(currentMapID, currentImportData, currentProfessionFilter, currentDisplayMode)
+    end
+    pullPanel:Hide()
+    UpdateRouteButtons()
+end)
+
+-- Cancelar / Fechar visualização
+btnCancelRoute:SetScript("OnClick", function()
+    isRouteEditMode = false
+    viewingRoute = nil
+    wipe(editingPulls)
+    currentPullIndex = 1
+    HideRoute()
+
+    -- Reseta seleção isolada
+    wipe(selectedNpcIDs)
+    selectedCount = 0
+    UpdateSidebarHeader()
+
+    if currentMapID and currentImportData then
+        RenderMobPinsDispatch(currentMapID, currentImportData, currentProfessionFilter, currentDisplayMode)
+    end
+    pullPanel:Hide()
+    UpdateRouteButtons()
+    UIDropDownMenu_SetText(routeDropdown, L["Saved routes"])
+end)
+
+-- Atualiza visibilidade dos botões conforme estado
+UpdateRouteButtons = function()
+    if currentMode ~= "mobs" then
+        btnEditRoute:Hide()
+        btnNextPull:Hide()
+        btnOptimize:Hide()
+        btnSaveRoute:Hide()
+        btnCancelRoute:Hide()
+        routeDropdown:Hide()
+        pullLabel:Hide()
+        return
+    end
+
+    if isRouteEditMode then
+        -- Modo edição ativo
+        btnEditRoute:Hide()
+        routeDropdown:Hide()
+        btnNextPull:Show()
+        btnCancelRoute:Show()
+        btnCancelRoute:SetText(L["Cancel"])
+
+        -- Mostrar salvar/otimizar se tem pulls
+        if #editingPulls > 0 then
+            btnSaveRoute:Show()
+            if #editingPulls >= 2 then
+                btnOptimize:Show()
+            else
+                btnOptimize:Hide()
+            end
+        else
+            btnSaveRoute:Hide()
+            btnOptimize:Hide()
+        end
+
+        -- Label do pull atual
+        local totalMobs = 0
+        for _, pull in ipairs(editingPulls) do totalMobs = totalMobs + #pull end
+        local r, g, b = GetPullColor(currentPullIndex)
+        pullLabel:SetTextColor(r, g, b)
+        pullLabel:SetText(string.format("Pull #%d  |  %d pulls  |  %d mobs",
+            currentPullIndex, #editingPulls, totalMobs))
+        pullLabel:Show()
+    elseif viewingRoute then
+        -- Visualizando rota salva
+        btnEditRoute:Hide()
+        btnNextPull:Hide()
+        btnOptimize:Hide()
+        btnSaveRoute:Hide()
+        btnCancelRoute:Show()
+        btnCancelRoute:SetText(L["Close Route"])
+        routeDropdown:Show()
+        pullLabel:Hide()
+    else
+        -- Estado normal
+        btnEditRoute:Show()
+        routeDropdown:Show()
+        btnNextPull:Hide()
+        btnOptimize:Hide()
+        btnSaveRoute:Hide()
+        btnCancelRoute:Hide()
+        pullLabel:Hide()
     end
 end
 
@@ -1071,7 +1950,7 @@ local function GroupMapsByContinent(mapList, data)
 
     for _, mapID in ipairs(mapList) do
         local mapInfo = C_Map.GetMapInfo(mapID)
-        local zoneName = mapInfo and mapInfo.name or ("Mapa " .. mapID)
+        local zoneName = mapInfo and mapInfo.name or string.format(L["Map %d"], mapID)
 
         local count = 0
         if isMobMode then
@@ -1160,9 +2039,9 @@ local function InitializeProfessionDropdown(self, level)
     if level ~= 1 then return end
 
     local filters = {
-        { key = "skinning",  label = "Couraria (Skinning)" },
-        { key = "tailoring", label = "Alfaiataria (Tailoring)" },
-        { key = "all",       label = "Todos" },
+        { key = "skinning",  label = L["Skinning"] },
+        { key = "tailoring", label = L["Tailoring"] },
+        { key = "all",       label = L["All"] },
     }
 
     for _, f in ipairs(filters) do
@@ -1193,13 +2072,13 @@ end
 
 UIDropDownMenu_Initialize(professionDropdown, InitializeProfessionDropdown)
 UIDropDownMenu_SetWidth(professionDropdown, 160)
-UIDropDownMenu_SetText(professionDropdown, "Couraria (Skinning)")
+UIDropDownMenu_SetText(professionDropdown, L["Skinning"])
 professionDropdown:Hide()
 
 -- Toggle de modo visual (portrait / ícone) — mesmo estilo dos filtros (verdinho)
 local displayToggle = CreateFrame("CheckButton", "FarmBuddyDisplayToggle", frame, "ChatConfigCheckButtonTemplate")
 displayToggle:SetPoint("LEFT", professionDropdown, "RIGHT", 10, 0)
-displayToggle.Text:SetText("Usar Retratos")
+displayToggle.Text:SetText(L["Use Portraits"])
 
 displayToggle:SetScript("OnClick", function(self)
     if self:GetChecked() then
@@ -1236,9 +2115,18 @@ UpdateModeUI = function()
         displayToggle:Hide()
         sidebar:Hide()
 
+        -- Limpa rota ao sair do modo mobs
+        isRouteEditMode = false
+        viewingRoute = nil
+        wipe(editingPulls)
+        currentPullIndex = 1
+        HideRoute()
+        pullPanel:Hide()
+
         btnModeNodes:SetNormalFontObject("GameFontHighlight")
         btnModeMobs:SetNormalFontObject("GameFontDisable")
     end
+    UpdateRouteButtons()
 end
 
 -- Função para trocar de modo
@@ -1255,12 +2143,8 @@ local function SetMode(mode)
             displayToggle:SetChecked(currentDisplayMode == "portrait")
 
             -- Atualizar texto do dropdown de profissão
-            local labels = {
-                skinning = "Couraria (Skinning)",
-                tailoring = "Alfaiataria (Tailoring)",
-                all = "Todos",
-            }
-            UIDropDownMenu_SetText(professionDropdown, labels[currentProfessionFilter] or "Todos")
+            local labels = FarmBuddyMobTracker.professionLabel
+            UIDropDownMenu_SetText(professionDropdown, labels[currentProfessionFilter] or L["All"])
         end
 
         currentImportData = FarmBuddyMobTracker:GetMobData(currentProfessionFilter)
@@ -1269,7 +2153,7 @@ local function SetMode(mode)
         else
             HideAllPins()
             HideAllTiles()
-            statusText:SetText("|cffff6600Nenhum mob disponível para exibição.|r")
+            statusText:SetText("|cffff6600" .. L["No mobs available to display."] .. "|r")
             UpdateInfoBar(nil, nil)
         end
     elseif mode == "nodes" then
@@ -1277,7 +2161,7 @@ local function SetMode(mode)
         if not currentImportData or not currentImportData.nodes then
             HideAllPins()
             HideAllTiles()
-            statusText:SetText("|cffff6600Nenhum dado de nodes carregado. Use o Import Manager.|r")
+            statusText:SetText("|cffff6600" .. L["No node data loaded. Use the Import Manager."] .. "|r")
             UpdateInfoBar(nil, nil)
         end
     end
@@ -1306,7 +2190,7 @@ LoadMap = function(mapID, data)
     currentMapID = mapID
 
     local mapInfo = C_Map.GetMapInfo(mapID)
-    local zoneName = mapInfo and mapInfo.name or ("Mapa " .. mapID)
+    local zoneName = mapInfo and mapInfo.name or string.format(L["Map %d"], mapID)
 
     if currentMode == "mobs" then
         titleText:SetText("Mob Map: " .. zoneName)
@@ -1316,10 +2200,16 @@ LoadMap = function(mapID, data)
 
     UIDropDownMenu_SetText(dropdownFrame, zoneName)
 
-    -- Trocar de mapa reseta a seleção isolada
+    -- Trocar de mapa reseta a seleção isolada e a rota ativa
     wipe(selectedNpcIDs)
     selectedCount = 0
     UpdateSidebarHeader()
+    isRouteEditMode = false
+    viewingRoute = nil
+    wipe(editingPulls)
+    currentPullIndex = 1
+    HideRoute()
+    pullPanel:Hide()
 
     local success = LoadMapTextures(mapID)
     if success then
@@ -1336,6 +2226,8 @@ LoadMap = function(mapID, data)
     end
 
     UpdateInfoBar(data, mapID)
+    UpdateRouteButtons()
+    UIDropDownMenu_SetText(routeDropdown, L["Saved routes"])
 end
 
 -- ============================
@@ -1371,7 +2263,7 @@ local function InitializeDropdown(self, level, menuList)
 
         if #noContinent > 0 then
             local info = UIDropDownMenu_CreateInfo()
-            info.text = "Outros"
+            info.text = L["Others"]
             info.notCheckable = true
             info.hasArrow = true
             info.menuList = "__other__"
@@ -1455,12 +2347,8 @@ function FarmBuddyMapPreview:Show(importData, mode)
                 currentDisplayMode = settings.displayMode or "icon"
                 displayToggle:SetChecked(currentDisplayMode == "portrait")
 
-                local labels = {
-                    skinning = "Couraria (Skinning)",
-                    tailoring = "Alfaiataria (Tailoring)",
-                    all = "Todos",
-                }
-                UIDropDownMenu_SetText(professionDropdown, labels[currentProfessionFilter] or "Todos")
+                local labels = FarmBuddyMobTracker.professionLabel
+                UIDropDownMenu_SetText(professionDropdown, labels[currentProfessionFilter] or L["All"])
             end
 
             currentImportData = FarmBuddyMobTracker:GetMobData(currentProfessionFilter)
@@ -1470,7 +2358,7 @@ function FarmBuddyMapPreview:Show(importData, mode)
             frame:Show()
             HideAllPins()
             HideAllTiles()
-            statusText:SetText("|cffff6600Nenhum mob disponível para exibição.|r")
+            statusText:SetText("|cffff6600" .. L["No mobs available to display."] .. "|r")
             return
         end
 
@@ -1479,7 +2367,7 @@ function FarmBuddyMapPreview:Show(importData, mode)
     else
         -- Modo nodes (comportamento original)
         if not importData or not importData.mapList or #importData.mapList == 0 then
-            print("|cffff0000[FarmBuddy]|r Nenhum mapa disponível para preview.")
+            print("|cffff0000[FarmBuddy]|r " .. L["No maps available for preview."])
             return
         end
 

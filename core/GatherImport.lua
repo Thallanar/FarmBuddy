@@ -1,3 +1,5 @@
+local L = FarmBuddyL
+
 FarmBuddyGatherImport = {}
 
 -- Sufixos de expansão usados pelo GatherMate2Storage
@@ -110,7 +112,7 @@ function FarmBuddyGatherImport:GetAvailableTypes()
     end
 
     if #available == 0 then
-        return nil, "Nenhum dado do GatherMate2 encontrado. Verifique se o GatherMate2 e seus pacotes de dados estão instalados e habilitados."
+        return nil, L["No GatherMate2 data found. Make sure GatherMate2 and its data packs are installed and enabled."]
     end
 
     table.sort(available, function(a, b) return a.nodeType < b.nodeType end)
@@ -137,7 +139,7 @@ function FarmBuddyGatherImport:ParseFromDB(nodeTypeFilter)
     end
 
     if totalNodes == 0 then
-        return nil, "Nenhum node encontrado para os tipos selecionados."
+        return nil, L["No nodes found for the selected types."]
     end
 
     local mapList = {}
@@ -208,7 +210,7 @@ end
 -- Importa de string exportada (Base64 -> LibDeflate -> AceSerializer)
 function FarmBuddyGatherImport:ParseFromString(inputString)
     if not inputString or inputString == "" then
-        return nil, "String de import vazia."
+        return nil, L["Empty import string."]
     end
 
     -- Remove espaços e quebras de linha
@@ -217,48 +219,48 @@ function FarmBuddyGatherImport:ParseFromString(inputString)
     -- Base64 decode
     local LibBase64 = LibStub and LibStub("LibBase64-1.0", true)
     if not LibBase64 then
-        return nil, "LibBase64-1.0 não encontrada."
+        return nil, string.format(L["%s not found."], "LibBase64-1.0")
     end
 
     local ok, decoded = pcall(LibBase64.Decode, LibBase64, inputString)
     if not ok or not decoded then
-        return nil, "Erro ao decodificar Base64: " .. tostring(decoded)
+        return nil, L["Error decoding Base64: "] .. tostring(decoded)
     end
 
     -- LibDeflate decompress
     local LibDeflate = LibStub and LibStub("LibDeflate", true)
     if not LibDeflate then
-        return nil, "LibDeflate não encontrada."
+        return nil, string.format(L["%s not found."], "LibDeflate")
     end
 
     local decompressed
     ok, decompressed = pcall(LibDeflate.DecompressDeflate, LibDeflate, decoded)
     if not ok or not decompressed then
-        return nil, "Erro ao descomprimir dados: " .. tostring(decompressed)
+        return nil, L["Error decompressing data: "] .. tostring(decompressed)
     end
 
     -- AceSerializer deserialize
     local AceSerializer = LibStub and LibStub("AceSerializer-3.0", true)
     if not AceSerializer then
-        return nil, "AceSerializer-3.0 não encontrada."
+        return nil, string.format(L["%s not found."], "AceSerializer-3.0")
     end
 
     local success, rawData = AceSerializer:Deserialize(decompressed)
     if not success then
-        return nil, "Erro ao deserializar dados: " .. tostring(rawData)
+        return nil, L["Error deserializing data: "] .. tostring(rawData)
     end
 
     if type(rawData) ~= "table" then
-        return nil, "Formato de dados inválido."
+        return nil, L["Invalid data format."]
     end
 
     local okProcess, nodes, mapList, totalNodes = pcall(ProcessImportStringData, rawData)
     if not okProcess then
-        return nil, "Erro ao processar dados importados: " .. tostring(nodes)
+        return nil, L["Error processing imported data: "] .. tostring(nodes)
     end
 
     if totalNodes == 0 then
-        return nil, "Nenhum node encontrado na string importada."
+        return nil, L["No nodes found in the imported string."]
     end
 
     return {
@@ -276,7 +278,7 @@ function FarmBuddyGatherImport:SaveImport(name, parsedData, source)
     end
 
     local entry = {
-        name = name or "Import sem nome",
+        name = name or L["Unnamed import"],
         createdAt = date("%Y-%m-%d %H:%M:%S"),
         source = source or "unknown",
         nodes = parsedData.nodes,
@@ -320,7 +322,7 @@ end
 function FarmBuddyGatherImport:ExportToString(index)
     local profile = FarmTracker:GetProfile()
     if not profile.gatherImports or not profile.gatherImports[index] then
-        return nil, "Import não encontrado."
+        return nil, L["Import not found."]
     end
 
     local importData = profile.gatherImports[index]
@@ -346,36 +348,36 @@ function FarmBuddyGatherImport:ExportToString(index)
     -- AceSerializer serialize
     local AceSerializer = LibStub and LibStub("AceSerializer-3.0", true)
     if not AceSerializer then
-        return nil, "AceSerializer-3.0 não encontrada."
+        return nil, string.format(L["%s not found."], "AceSerializer-3.0")
     end
 
     local ok, serialized = pcall(AceSerializer.Serialize, AceSerializer, rawData)
     if not ok or not serialized then
-        return nil, "Erro ao serializar dados: " .. tostring(serialized)
+        return nil, L["Error serializing data: "] .. tostring(serialized)
     end
 
     -- LibDeflate compress
     local LibDeflate = LibStub and LibStub("LibDeflate", true)
     if not LibDeflate then
-        return nil, "LibDeflate não encontrada."
+        return nil, string.format(L["%s not found."], "LibDeflate")
     end
 
     local compressed
     ok, compressed = pcall(LibDeflate.CompressDeflate, LibDeflate, serialized)
     if not ok or not compressed then
-        return nil, "Erro ao comprimir dados: " .. tostring(compressed)
+        return nil, L["Error compressing data: "] .. tostring(compressed)
     end
 
     -- Base64 encode
     local LibBase64 = LibStub and LibStub("LibBase64-1.0", true)
     if not LibBase64 then
-        return nil, "LibBase64-1.0 não encontrada."
+        return nil, string.format(L["%s not found."], "LibBase64-1.0")
     end
 
     local encoded
     ok, encoded = pcall(LibBase64.Encode, LibBase64, compressed)
     if not ok or not encoded then
-        return nil, "Erro ao codificar Base64: " .. tostring(encoded)
+        return nil, L["Error encoding Base64: "] .. tostring(encoded)
     end
 
     return encoded

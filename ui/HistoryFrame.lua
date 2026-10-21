@@ -1,3 +1,5 @@
+local L = FarmBuddyL
+
 local historyFrame = CreateFrame("Frame", "FarmBuddyHistoryFrame", UIParent, BackdropTemplateMixin and "BackdropTemplate")
 historyFrame:SetSize(420, 450)
 historyFrame:SetPoint("CENTER")
@@ -21,7 +23,7 @@ titleBar:SetPoint("TOP", historyFrame, "TOP", 0, -6)
 
 local titleText = titleBar:CreateFontString(nil, "OVERLAY", "GameFontNormal")
 titleText:SetPoint("LEFT", 15, 0)
-titleText:SetText("Histórico de Farm")
+titleText:SetText(L["Farm History"])
 
 -- Close Button
 local closeButton = CreateFrame("Button", nil, titleBar)
@@ -46,7 +48,7 @@ clearButton:SetNormalTexture("Interface\\Buttons\\UI-RefreshButton")
 
 clearButton:SetScript("OnEnter", function(self)
     GameTooltip:SetOwner(self, "ANCHOR_RIGHT")
-    GameTooltip:AddLine("Limpar histórico")
+    GameTooltip:AddLine(L["Clear history"])
     GameTooltip:Show()
 end)
 clearButton:SetScript("OnLeave", function()
@@ -113,7 +115,7 @@ local function BuildHistory()
     if not history or #history == 0 then
         local emptyText = scrollChild:CreateFontString(nil, "OVERLAY", "GameFontHighlight")
         emptyText:SetPoint("CENTER", scrollChild, "CENTER", 0, 0)
-        emptyText:SetText("Nenhuma sessão registrada.")
+        emptyText:SetText(L["No sessions recorded."])
 
         local wrapper = CreateFrame("Frame", nil, scrollChild)
         wrapper:SetSize(360, 40)
@@ -146,7 +148,7 @@ local function BuildHistory()
         local headerLabel = header:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
         headerLabel:SetPoint("LEFT", 5, 0)
 
-        local headerString = string.format("%s  %s  |  %s  |  %d itens",
+        local headerString = string.format(L["%s  %s  |  %s  |  %d items"],
             arrow,
             session.startTime or "?",
             FormatDuration(session.duration or 0),
@@ -234,7 +236,7 @@ local function BuildHistory()
 
                 local totalText = totalFrame:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
                 totalText:SetPoint("LEFT", 0, 0)
-                totalText:SetText("|cffffffffTotal estimado:|r  " .. FarmTracker:FormatMoney(sessionTotal))
+                totalText:SetText("|cffffffff" .. L["Estimated total:"] .. "|r  " .. FarmTracker:FormatMoney(sessionTotal))
 
                 table.insert(sessionFrames, totalFrame)
                 yOffset = yOffset + 24
@@ -250,9 +252,9 @@ end
 -- Confirmação de limpeza
 clearButton:SetScript("OnClick", function()
     StaticPopupDialogs["FARMBUDDY_CLEAR_HISTORY"] = {
-        text = "Tem certeza que deseja limpar todo o histórico de farm deste personagem?",
-        button1 = "Sim",
-        button2 = "Não",
+        text = L["Are you sure you want to clear all farm history for this character?"],
+        button1 = L["Yes"],
+        button2 = L["No"],
         OnAccept = function()
             local profile = FarmTracker:GetProfile()
             wipe(profile.sessionHistory)

@@ -1,3 +1,5 @@
+local L = FarmBuddyL
+
 local f = CreateFrame("Frame", "FarmTrackerFrame", UIParent, BackdropTemplateMixin and "BackdropTemplate")
 f:SetSize(240, 160)
 f:SetPoint("CENTER")
@@ -64,7 +66,7 @@ end)
 
 historyButton:SetScript("OnEnter", function(self)
     GameTooltip:SetOwner(self, "ANCHOR_RIGHT")
-    GameTooltip:AddLine("Histórico de Farm")
+    GameTooltip:AddLine(L["Farm History"])
     GameTooltip:Show()
 end)
 historyButton:SetScript("OnLeave", function()
@@ -90,7 +92,7 @@ end)
 
 importButton:SetScript("OnEnter", function(self)
     GameTooltip:SetOwner(self, "ANCHOR_RIGHT")
-    GameTooltip:AddLine("Importar GatherMate2")
+    GameTooltip:AddLine(L["Import GatherMate2"])
     GameTooltip:Show()
 end)
 importButton:SetScript("OnLeave", function()
@@ -116,7 +118,7 @@ end)
 
 mobMapButton:SetScript("OnEnter", function(self)
     GameTooltip:SetOwner(self, "ANCHOR_RIGHT")
-    GameTooltip:AddLine("Mapa de Mobs")
+    GameTooltip:AddLine(L["Mob Map"])
     GameTooltip:AddLine("Skinning & Tailoring", 0.5, 0.5, 0.5)
     GameTooltip:Show()
 end)
@@ -143,19 +145,19 @@ end)
 local pauseButton = CreateFrame("Button", nil, f, "GameMenuButtonTemplate")
 pauseButton:SetPoint("CENTER", f)
 pauseButton:SetSize(120, 20)
-pauseButton:SetText("Pausar")
+pauseButton:SetText(L["Pause"])
 
 -- Interface do Botão de Start:
 local startButton = CreateFrame("Button", nil, f, "GameMenuButtonTemplate")
 startButton:SetPoint("BOTTOM", pauseButton, "TOP", 0, 5)
 startButton:SetSize(120, 20)
-startButton:SetText("Iniciar")
+startButton:SetText(L["Start"])
 
 -- Interface do Botão de Stop:
 local stopButton = CreateFrame("Button", nil, f, "GameMenuButtonTemplate")
 stopButton:SetPoint("TOP", pauseButton, "BOTTOM", 0, -5)
 stopButton:SetSize(120, 20)
-stopButton:SetText("Parar")
+stopButton:SetText(L["Stop"])
 
 -- Atualiza estado dos botões conforme sessão
 local function UpdateButtonStates()
@@ -164,15 +166,15 @@ local function UpdateButtonStates()
         pauseButton:Enable()
         stopButton:Enable()
         if FarmTracker:isPaused() then
-            pauseButton:SetText("Retomar")
+            pauseButton:SetText(L["Resume"])
         else
-            pauseButton:SetText("Pausar")
+            pauseButton:SetText(L["Pause"])
         end
     else
         startButton:Enable()
         pauseButton:Disable()
         stopButton:Disable()
-        pauseButton:SetText("Pausar")
+        pauseButton:SetText(L["Pause"])
     end
 end
 
@@ -201,7 +203,7 @@ UpdateButtonStates()
 -- Tempo decorrido (FontString)
 local timerText = f:CreateFontString(nil, "OVERLAY", "GameFontNormalLarge")
 timerText:SetPoint("TOP", stopButton, "BOTTOM", 0, -10)
-timerText:SetText("Tempo: 00:00:00")
+timerText:SetText(string.format(L["Time: %02d:%02d:%02d"], 0, 0, 0))
 
 local updateInterval = 0
 f:SetScript("OnUpdate", function(self, elapsed)
@@ -212,11 +214,11 @@ f:SetScript("OnUpdate", function(self, elapsed)
             local hours = math.floor(totalSeconds / 3600)
             local minutes = math.floor((totalSeconds % 3600) / 60)
             local seconds = totalSeconds % 60
-            timerText:SetText(string.format("Tempo: %02d:%02d:%02d", hours, minutes, seconds))
+            timerText:SetText(string.format(L["Time: %02d:%02d:%02d"], hours, minutes, seconds))
             updateInterval = 0
         end
     else
-        timerText:SetText("Tempo: 00:00:00")
+        timerText:SetText(string.format(L["Time: %02d:%02d:%02d"], 0, 0, 0))
     end
 end)
 

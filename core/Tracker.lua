@@ -28,7 +28,7 @@ function FarmTracker:StopSession()
     if duration > 0 and next(self.lootTable) then
         local profile = self:GetProfile()
         table.insert(profile.sessionHistory, {
-            startTime = self.sessionStartDate or "desconhecido",
+            startTime = self.sessionStartDate or FarmBuddyL["Unknown"],
             duration = math.floor(duration),
             lootTable = CopyTable(self.lootTable),
         })
