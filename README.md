@@ -58,6 +58,9 @@ FarmBuddy is free software: you can redistribute it and/or modify it under the t
 
 ## Changelog
 
+### v1.7.0
+- **The Coiled Isle** — New zone in the mob database with 343 hostile mobs and real DisplayIDs for 3D portraits on the map (Beasts, Humanoids, Undead, Aberrations, Giants, Elemental and Demon)
+
 ### v1.6.0
 - **English interface** — All UI text is now in English by default, with a full Brazilian Portuguese translation for ptBR clients
 - **Localization system** — New `core/Locale.lua` with automatic fallback to English for untranslated text
@@ -74,6 +77,3 @@ FarmBuddy is free software: you can redistribute it and/or modify it under the t
 - **Route persistence** — Save, load and delete routes per zone via dropdown
 - **Visual feedback** — Colored rings around mobs indicating their pull, lines connecting pull centroids on the map
 - **Filter compatibility** — Sidebar mob filtering works during route editing for isolating specific mobs
-
-### v1.4.2
-- **Fix: warbound items in profit estimate** — Warbound (account/warband-bound) items were incorrectly counted toward a session's farmed gold even though they cannot be sold. Value calculation now excludes all non-marketable bind types (soulbound and warbound), via a centralized `IsMarketable` check
