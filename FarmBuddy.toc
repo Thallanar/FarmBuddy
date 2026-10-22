@@ -1,8 +1,8 @@
-## Interface: 120005
+## Interface: 120105, 16001, 50504, 20506, 11509
 ## Title: FarmBuddy
 ## Notes: Tracks loot, profit and mob spawns during farming sessions
 ## Notes-ptBR: Rastreia coleta de itens durante sessões de farm
-## Version: 1.7.0
+## Version: 1.8.0
 ## Author: Thallanar
 ## X-License: GPLv3
 ## IconTexture: Interface\AddOns\FarmBuddy\icon\gear
@@ -38,4 +38,4 @@ core/Settings.lua
 ui/HistoryFrame.lua
 ui/MapPreviewFrame.lua
 ui/ImportManagerFrame.lua
-ui/MainFrame.lua
+ui/MainFrame.lua

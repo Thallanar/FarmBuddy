@@ -11,6 +11,7 @@ World of Warcraft addon for tracking farming sessions, automatically capturing l
 - **Session history** — Full history viewer with items, duration and estimated value
 - **Per-character profiles** — Each character keeps its own settings and history
 - **Localization** — Interface in English and Brazilian Portuguese (follows the game client language)
+- **Multi-version** — Runs on Retail, WoW: Forever, MoP Classic, TBC Anniversary and Classic Era from a single package
 - **Minimap button** — Quick access via LibDataBroker + LibDBIcon
 - **Import Manager** — Import GatherMate2 data with a map preview
 - **Data export** — Export gathering data in a compressed format
@@ -33,8 +34,12 @@ World of Warcraft addon for tracking farming sessions, automatically capturing l
 Copy the `FarmBuddy` folder to:
 
 ```
-World of Warcraft/_retail_/Interface/AddOns/FarmBuddy
+World of Warcraft/<game folder>/Interface/AddOns/FarmBuddy
 ```
+
+Where `<game folder>` is `_retail_`, `_classic_`, `_anniversary_`, `_classic_era_` or the WoW: Forever folder, depending on the version you play.
+
+> Zone mob data (Mob Map portraits and spawns) currently targets Retail zones; on other versions the map is filled by real-time tracking.
 
 ## Credits
 
@@ -58,6 +63,11 @@ FarmBuddy is free software: you can redistribute it and/or modify it under the t
 
 ## Changelog
 
+### v1.8.0
+- **Classic & Forever support** — FarmBuddy now loads on WoW: Forever, MoP Classic, TBC Anniversary and Classic Era, in addition to Retail, using a multi-version TOC
+- **Retail interface bump** — TOC updated to the current Retail patch so the addon is no longer flagged as out of date
+- **Compatibility fix** — Import Manager checkboxes now use a template available on every game version
+
 ### v1.7.0
 - **The Coiled Isle** — New zone in the mob database with 343 hostile mobs and real DisplayIDs for 3D portraits on the map (Beasts, Humanoids, Undead, Aberrations, Giants, Elemental and Demon)
 
@@ -67,13 +77,3 @@ FarmBuddy is free software: you can redistribute it and/or modify it under the t
 - **GPLv3 license** — Project is now licensed under the GNU GPLv3, with credits for all bundled libraries
 - **Lighter package** — Icons resized to 256x256, reducing the download from ~3 MB to ~200 KB
 - **CurseForge packaging** — English TOC notes, `ptBR` notes and cleaner release zip
-
-### v1.5.0
-- **Route Maker** — New MDT-style route planning system for farming routes
-- **Pull system** — Group mobs into numbered pulls by clicking individual spawns on the map
-- **Pull panel** — Dedicated left-side panel showing all pulls with color-coded bars, mob portraits and delete buttons
-- **Pull navigation** — Click any pull in the panel to re-select it for editing
-- **Route optimization** — One-click pull order optimization using Nearest Neighbor + 2-opt algorithm
-- **Route persistence** — Save, load and delete routes per zone via dropdown
-- **Visual feedback** — Colored rings around mobs indicating their pull, lines connecting pull centroids on the map
-- **Filter compatibility** — Sidebar mob filtering works during route editing for isolating specific mobs
