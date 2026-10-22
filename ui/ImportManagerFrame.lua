@@ -266,7 +266,7 @@ local function ShowTypeSelection()
 
     local yOffset = -35
     for i, typeInfo in ipairs(available) do
-        local cb = CreateFrame("CheckButton", "FBTypeCheck" .. i, typeFrame, "InterfaceOptionsCheckButtonTemplate")
+        local cb = CreateFrame("CheckButton", "FBTypeCheck" .. i, typeFrame, "UICheckButtonTemplate")
         cb:SetPoint("TOPLEFT", 20, yOffset)
         cb:SetChecked(true)
         typeSelectedKeys[typeInfo.prefix] = true
