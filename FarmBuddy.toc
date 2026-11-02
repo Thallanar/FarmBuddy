@@ -2,7 +2,7 @@
 ## Title: FarmBuddy
 ## Notes: Tracks loot, profit and mob spawns during farming sessions
 ## Notes-ptBR: Rastreia coleta de itens durante sessões de farm
-## Version: 1.8.0
+## Version: 1.8.1
 ## Author: Thallanar
 ## X-License: GPLv3
 ## IconTexture: Interface\AddOns\FarmBuddy\icon\gear

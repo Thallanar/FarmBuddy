@@ -27,11 +27,14 @@ function FarmTracker:StopSession()
     local duration = self:GetElapsedTime()
     if duration > 0 and next(self.lootTable) then
         local profile = self:GetProfile()
-        table.insert(profile.sessionHistory, {
+        local session = {
             startTime = self.sessionStartDate or FarmBuddyL["Unknown"],
             duration = math.floor(duration),
             lootTable = CopyTable(self.lootTable),
-        })
+        }
+        -- Congela os preços no momento da conclusão
+        self:FreezeSessionValue(session)
+        table.insert(profile.sessionHistory, session)
     end
 
     self.sessionActive = false

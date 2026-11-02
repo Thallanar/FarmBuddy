@@ -175,6 +175,14 @@ eventFrame:SetScript("OnEvent", function(self, event, addonName)
     elseif event == "PLAYER_LOGIN" then
         self:UnregisterEvent("PLAYER_LOGIN")
 
+        -- Migração: congela o valor de sessões antigas (salvas sem preço) com os preços atuais.
+        -- Delay para garantir que TSM/Auctionator já carregaram seus dados de preço.
+        C_Timer.After(5, function()
+            for _, session in ipairs(FarmTracker:GetProfile().sessionHistory) do
+                FarmTracker:FreezeSessionValue(session)
+            end
+        end)
+
         -- Inicia tracking de mobs se habilitado
         if FarmBuddyMobTracker then
             local profile = FarmTracker:GetProfile()

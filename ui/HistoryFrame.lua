@@ -83,19 +83,33 @@ local function CountItems(lootTable)
     return total
 end
 
-local function CalculateSessionValue(lootTable)
+-- Preço unitário do item: usa o preço congelado na conclusão da sessão;
+-- só consulta o preço atual em sessões antigas ainda não congeladas.
+local function GetSessionItemPrice(data, itemID)
+    if data.unitPrice then
+        return data.unitPrice > 0 and data.unitPrice or nil
+    end
+    -- Ignora itens não vendáveis (soulbound e warbound)
+    if not FarmTracker:IsMarketable(data.bindType) then
+        return nil
+    end
+    return FarmTracker:GetItemPrice(tonumber(itemID), data.link)
+end
+
+local function CalculateSessionValue(session)
+    if session.valueFrozen then
+        return (session.totalValue or 0) > 0 and session.totalValue or nil
+    end
+
     if not FarmTracker:GetPriceSource() then
         return nil
     end
 
     local totalValue = 0
-    for itemID, data in pairs(lootTable) do
-        -- Ignora itens não vendáveis (soulbound e warbound) no cálculo de valor
-        if FarmTracker:IsMarketable(data.bindType) then
-            local price = FarmTracker:GetItemPrice(tonumber(itemID), data.link)
-            if price then
-                totalValue = totalValue + (price * data.count)
-            end
+    for itemID, data in pairs(session.lootTable or {}) do
+        local price = GetSessionItemPrice(data, itemID)
+        if price then
+            totalValue = totalValue + (price * data.count)
         end
     end
 
@@ -132,7 +146,7 @@ local function BuildHistory()
     for i = #history, 1, -1 do
         local session = history[i]
         local itemCount = CountItems(session.lootTable or {})
-        local sessionValue = CalculateSessionValue(session.lootTable or {})
+        local sessionValue = CalculateSessionValue(session)
         local isExpanded = expandedSessions[i]
 
         -- Header da sessão
@@ -201,13 +215,11 @@ local function BuildHistory()
 
                 local itemText = (data.link or data.label or "?") .. " x" .. (data.count or 0)
                 -- Só mostra preço para itens vendáveis (exclui soulbound e warbound)
-                if FarmTracker:IsMarketable(data.bindType) then
-                    local price = FarmTracker:GetItemPrice(tonumber(data.itemID), data.link)
-                    if price then
-                        local totalItemPrice = price * (data.count or 0)
-                        sessionTotal = sessionTotal + totalItemPrice
-                        itemText = itemText .. "  " .. FarmTracker:FormatMoney(totalItemPrice)
-                    end
+                local price = GetSessionItemPrice(data, data.itemID)
+                if price then
+                    local totalItemPrice = price * (data.count or 0)
+                    sessionTotal = sessionTotal + totalItemPrice
+                    itemText = itemText .. "  " .. FarmTracker:FormatMoney(totalItemPrice)
                 end
 
                 text:SetText(itemText)
