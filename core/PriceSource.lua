@@ -61,6 +61,30 @@ function FarmTracker:GetItemPrice(itemID, itemLink)
     return nil
 end
 
+-- Congela o valor da sessão: grava o preço unitário de cada item no momento da conclusão,
+-- para que novos scans da AH não alterem o valor de sessões já finalizadas.
+-- Sem fonte de preço disponível, não congela (tenta novamente no próximo login).
+function FarmTracker:FreezeSessionValue(session)
+    if session.valueFrozen or not session.lootTable then return end
+
+    local source = self:GetPriceSource()
+    if not source then return end
+
+    local total = 0
+    for itemID, data in pairs(session.lootTable) do
+        local price = 0
+        if self:IsMarketable(data.bindType) then
+            price = self:GetItemPrice(tonumber(itemID), data.link) or 0
+        end
+        data.unitPrice = price
+        total = total + price * (data.count or 0)
+    end
+
+    session.totalValue = total
+    session.priceSource = source
+    session.valueFrozen = true
+end
+
 function FarmTracker:FormatMoney(copperAmount)
     if not copperAmount or copperAmount <= 0 then
         return "0c"

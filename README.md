@@ -63,6 +63,9 @@ FarmBuddy is free software: you can redistribute it and/or modify it under the t
 
 ## Changelog
 
+### v1.8.1
+- **Fix: history values changing after AH scans** — Completed sessions now store each item's price at the moment the session ends, so new Auction House scans no longer change the gold value of past sessions. This makes it possible to compare how much was farmed between sessions. Sessions saved before this version are frozen once, using the prices at the first login after the update
+
 ### v1.8.0
 - **Classic & Forever support** — FarmBuddy now loads on WoW: Forever, MoP Classic, TBC Anniversary and Classic Era, in addition to Retail, using a multi-version TOC
 - **Retail interface bump** — TOC updated to the current Retail patch so the addon is no longer flagged as out of date
@@ -70,10 +73,3 @@ FarmBuddy is free software: you can redistribute it and/or modify it under the t
 
 ### v1.7.0
 - **The Coiled Isle** — New zone in the mob database with 343 hostile mobs and real DisplayIDs for 3D portraits on the map (Beasts, Humanoids, Undead, Aberrations, Giants, Elemental and Demon)
-
-### v1.6.0
-- **English interface** — All UI text is now in English by default, with a full Brazilian Portuguese translation for ptBR clients
-- **Localization system** — New `core/Locale.lua` with automatic fallback to English for untranslated text
-- **GPLv3 license** — Project is now licensed under the GNU GPLv3, with credits for all bundled libraries
-- **Lighter package** — Icons resized to 256x256, reducing the download from ~3 MB to ~200 KB
-- **CurseForge packaging** — English TOC notes, `ptBR` notes and cleaner release zip
