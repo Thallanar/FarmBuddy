@@ -39,6 +39,9 @@ Track your farming sessions: automatic loot capture, profit estimates, session h
 - `/farmbuddy` toggles the main window
 - Minimap button for quick access
 
+### WoW: Forever
+Playing WoW: Forever? Also install **FarmBuddy: Forever** to get the classic zones on the Mob Map.
+
 ### Languages
 Works on any client language. The interface is available in English and Brazilian Portuguese.
 
