@@ -1,0 +1,30 @@
+## Interface: 16001
+## Title: FarmBuddy: |cffffd100Forever|r
+## Notes: Classic zone mob database for FarmBuddy on WoW: Forever
+## Notes-ptBR: Banco de mobs das zonas clássicas para o FarmBuddy no WoW: Forever
+## Version: 1.0.0
+## Author: Thallanar
+## X-License: GPLv3
+## IconTexture: Interface\AddOns\FarmBuddy\icon\gear
+## Group: FarmBuddy
+## Dependencies: FarmBuddy
+
+Init.lua
+
+# Zonas (cada arquivo registra seus mobs via FarmBuddyForever:RegisterZone)
+
+# Kalimdor
+data/MobDisplayIDs_Teldrassil.lua
+data/MobDisplayIDs_Mulgore.lua
+data/MobDisplayIDs_Durotar.lua
+data/MobDisplayIDs_Darkshore.lua
+
+# Eastern Kingdoms
+data/MobDisplayIDs_DunMorogh.lua
+data/MobDisplayIDs_ElwynnForest.lua
+data/MobDisplayIDs_TirisfalGlades.lua
+data/MobDisplayIDs_LochModan.lua
+data/MobDisplayIDs_Westfall.lua
+
+# Zonas novas do Forever
+data/MobDisplayIDs_ZephrasIsle.lua

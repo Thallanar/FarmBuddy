@@ -24,6 +24,7 @@ World of Warcraft addon for tracking farming sessions, automatically capturing l
 - **Opens on player zone** — The map automatically selects the player's current zone when opened (if registered)
 - **Exploration overlay** — Maps rendered with explored textures for full visualization
 - **Route Maker (pulls)** — MDT-style route planning: group mobs into numbered pulls, optimize order, save and load routes per zone
+- **Extensions** — Version-specific mob data ships as separate addons (like **FarmBuddy: Forever**), so each client only loads the zones it needs
 
 ## Slash Commands
 
@@ -39,7 +40,7 @@ World of Warcraft/<game folder>/Interface/AddOns/FarmBuddy
 
 Where `<game folder>` is `_retail_`, `_classic_`, `_anniversary_`, `_classic_era_` or the WoW: Forever folder, depending on the version you play.
 
-> Zone mob data (Mob Map portraits and spawns) currently targets Retail zones; on other versions the map is filled by real-time tracking.
+> The base addon ships the Retail zone mob database. On **WoW: Forever**, install the **FarmBuddy: Forever** extension as well to get the classic zones on the Mob Map.
 
 ## Credits
 
@@ -63,6 +64,10 @@ FarmBuddy is free software: you can redistribute it and/or modify it under the t
 
 ## Changelog
 
+### v1.9.0
+- **Extension support** — New public API (`FarmBuddyAPI`) that lets separate addons add mob data to FarmBuddy. Version-specific data no longer needs to ship with the base addon, keeping Retail light
+- **FarmBuddy: Forever** — First extension, released as its own project: classic zone mob database for WoW: Forever
+
 ### v1.8.1
 - **Fix: history values changing after AH scans** — Completed sessions now store each item's price at the moment the session ends, so new Auction House scans no longer change the gold value of past sessions. This makes it possible to compare how much was farmed between sessions. Sessions saved before this version are frozen once, using the prices at the first login after the update
 
@@ -70,6 +75,3 @@ FarmBuddy is free software: you can redistribute it and/or modify it under the t
 - **Classic & Forever support** — FarmBuddy now loads on WoW: Forever, MoP Classic, TBC Anniversary and Classic Era, in addition to Retail, using a multi-version TOC
 - **Retail interface bump** — TOC updated to the current Retail patch so the addon is no longer flagged as out of date
 - **Compatibility fix** — Import Manager checkboxes now use a template available on every game version
-
-### v1.7.0
-- **The Coiled Isle** — New zone in the mob database with 343 hostile mobs and real DisplayIDs for 3D portraits on the map (Beasts, Humanoids, Undead, Aberrations, Giants, Elemental and Demon)
