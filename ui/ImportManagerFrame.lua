@@ -1,611 +1,257 @@
+-- =============================================================================
+-- FarmBuddy - Diálogos de import do GatherMate2
+-- =============================================================================
+-- A lista de imports agora fica em Settings > Profiles. Este arquivo só
+-- mantém os diálogos (tipos de node, colar string, nome, renomear, exportar).
+-- =============================================================================
+
 local L = FarmBuddyL
+local T = FarmBuddyTheme
 
 FarmBuddyImportManager = {}
+local M = FarmBuddyImportManager
 
-local frame = CreateFrame("Frame", "FarmBuddyImportManagerFrame", UIParent, BackdropTemplateMixin and "BackdropTemplate")
-frame:SetSize(450, 500)
-frame:SetPoint("CENTER", -200, 0)
-frame:SetBackdrop({
-    bgFile = "Interface\\DialogFrame\\UI-DialogBox-Background",
-    edgeFile = "Interface\\DialogFrame\\UI-DialogBox-Border",
-    tile = true, tileSize = 32, edgeSize = 32,
-    insets = { left = 11, right = 12, top = 12, bottom = 11 }
-})
-frame:SetMovable(true)
-frame:EnableMouse(true)
-frame:RegisterForDrag("LeftButton")
-frame:SetScript("OnDragStart", frame.StartMoving)
-frame:SetScript("OnDragStop", frame.StopMovingOrSizing)
-frame:SetFrameStrata("HIGH")
-frame:Hide()
-
--- Title Bar
-local titleBar = CreateFrame("Frame", nil, frame)
-titleBar:SetSize(frame:GetWidth(), 24)
-titleBar:SetPoint("TOP", frame, "TOP", 0, -6)
-
-local titleText = titleBar:CreateFontString(nil, "OVERLAY", "GameFontNormal")
-titleText:SetPoint("LEFT", 15, 0)
-titleText:SetText(L["Import GatherMate2"])
-
--- Close Button
-local closeButton = CreateFrame("Button", nil, titleBar)
-closeButton:SetSize(24, 24)
-closeButton:SetPoint("TOPRIGHT", -8, 0)
-closeButton:SetHighlightTexture("Interface\\Buttons\\UI-Common-MouseHilight")
-
-local closeIcon = closeButton:CreateTexture(nil, "ARTWORK")
-closeIcon:SetAllPoints()
-closeIcon:SetTexture("Interface\\AddOns\\FarmBuddy\\icon\\close.png")
-
-closeButton:SetScript("OnClick", function()
-    frame:Hide()
-end)
-
--- Botões de importação
-local btnFromDB = CreateFrame("Button", nil, frame, "GameMenuButtonTemplate")
-btnFromDB:SetSize(190, 24)
-btnFromDB:SetPoint("TOPLEFT", 15, -35)
-btnFromDB:SetText(L["Import from GatherMate2"])
-
-local btnFromString = CreateFrame("Button", nil, frame, "GameMenuButtonTemplate")
-btnFromString:SetSize(190, 24)
-btnFromString:SetPoint("TOPRIGHT", -15, -35)
-btnFromString:SetText(L["Paste String"])
-
--- ScrollFrame para lista de imports
-local scrollFrame = CreateFrame("ScrollFrame", nil, frame, "UIPanelScrollFrameTemplate")
-scrollFrame:SetPoint("TOPLEFT", 10, -65)
-scrollFrame:SetPoint("BOTTOMRIGHT", -30, 10)
-
-local scrollChild = CreateFrame("Frame", nil, scrollFrame)
-scrollChild:SetSize(390, 1)
-scrollFrame:SetScrollChild(scrollChild)
-
--- Estado
-local listFrames = {}
-
--- ============================
--- PASTE FRAME (Colar String)
--- ============================
-local pasteFrame = CreateFrame("Frame", nil, frame, BackdropTemplateMixin and "BackdropTemplate")
-pasteFrame:SetSize(410, 250)
-pasteFrame:SetPoint("CENTER", frame, "CENTER", 0, 0)
-pasteFrame:SetBackdrop({
-    bgFile = "Interface\\DialogFrame\\UI-DialogBox-Background",
-    edgeFile = "Interface\\DialogFrame\\UI-DialogBox-Border",
-    tile = true, tileSize = 32, edgeSize = 32,
-    insets = { left = 11, right = 12, top = 12, bottom = 11 }
-})
-pasteFrame:SetFrameLevel(frame:GetFrameLevel() + 20)
-pasteFrame:Hide()
-
-local pasteTitle = pasteFrame:CreateFontString(nil, "OVERLAY", "GameFontNormal")
-pasteTitle:SetPoint("TOP", 0, -15)
-pasteTitle:SetText(L["Paste the GatherMate2 export string"])
-
-local pasteScrollFrame = CreateFrame("ScrollFrame", "FarmBuddyPasteScroll", pasteFrame, "UIPanelScrollFrameTemplate")
-pasteScrollFrame:SetPoint("TOPLEFT", 15, -35)
-pasteScrollFrame:SetPoint("BOTTOMRIGHT", -35, 60)
-
-local pasteEditBox = CreateFrame("EditBox", "FarmBuddyPasteEditBox", pasteScrollFrame)
-pasteEditBox:SetMultiLine(true)
-pasteEditBox:SetAutoFocus(false)
-pasteEditBox:SetFontObject("ChatFontNormal")
-pasteEditBox:SetWidth(360)
-pasteEditBox:SetScript("OnEscapePressed", function(self) self:ClearFocus() end)
-pasteScrollFrame:SetScrollChild(pasteEditBox)
-
-local pasteErrorText = pasteFrame:CreateFontString(nil, "OVERLAY", "GameFontNormalSmall")
-pasteErrorText:SetPoint("BOTTOMLEFT", 15, 40)
-pasteErrorText:SetTextColor(1, 0.2, 0.2)
-pasteErrorText:SetText("")
-
-local btnPasteProcess = CreateFrame("Button", nil, pasteFrame, "GameMenuButtonTemplate")
-btnPasteProcess:SetSize(120, 24)
-btnPasteProcess:SetPoint("BOTTOMRIGHT", -50, 12)
-btnPasteProcess:SetText(L["Process"])
-
-local btnPasteCancel = CreateFrame("Button", nil, pasteFrame, "GameMenuButtonTemplate")
-btnPasteCancel:SetSize(100, 24)
-btnPasteCancel:SetPoint("RIGHT", btnPasteProcess, "LEFT", -5, 0)
-btnPasteCancel:SetText(L["Cancel"])
-
-btnPasteCancel:SetScript("OnClick", function()
-    pasteEditBox:SetText("")
-    pasteErrorText:SetText("")
-    pasteFrame:Hide()
-    scrollFrame:Show()
-end)
-
--- ============================
--- NAME INPUT DIALOG
--- ============================
-local nameFrame = CreateFrame("Frame", nil, frame, BackdropTemplateMixin and "BackdropTemplate")
-nameFrame:SetSize(350, 120)
-nameFrame:SetPoint("CENTER", frame, "CENTER", 0, 0)
-nameFrame:SetBackdrop({
-    bgFile = "Interface\\DialogFrame\\UI-DialogBox-Background",
-    edgeFile = "Interface\\DialogFrame\\UI-DialogBox-Border",
-    tile = true, tileSize = 32, edgeSize = 32,
-    insets = { left = 11, right = 12, top = 12, bottom = 11 }
-})
-nameFrame:SetFrameLevel(frame:GetFrameLevel() + 30)
-nameFrame:Hide()
-
-local nameTitle = nameFrame:CreateFontString(nil, "OVERLAY", "GameFontNormal")
-nameTitle:SetPoint("TOP", 0, -15)
-nameTitle:SetText(L["Import Name"])
-
-local nameEditBox = CreateFrame("EditBox", nil, nameFrame, "InputBoxTemplate")
-nameEditBox:SetSize(280, 22)
-nameEditBox:SetPoint("CENTER", 0, 0)
-nameEditBox:SetAutoFocus(true)
-
-local nameInfoText = nameFrame:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
-nameInfoText:SetPoint("TOP", nameTitle, "BOTTOM", 0, -5)
-
-local pendingData = nil
-local pendingSource = nil
-
-local btnNameConfirm = CreateFrame("Button", nil, nameFrame, "GameMenuButtonTemplate")
-btnNameConfirm:SetSize(100, 24)
-btnNameConfirm:SetPoint("BOTTOMRIGHT", -30, 12)
-btnNameConfirm:SetText(L["Save"])
-
-local btnNameCancel = CreateFrame("Button", nil, nameFrame, "GameMenuButtonTemplate")
-btnNameCancel:SetSize(100, 24)
-btnNameCancel:SetPoint("RIGHT", btnNameConfirm, "LEFT", -5, 0)
-btnNameCancel:SetText(L["Cancel"])
-
-btnNameCancel:SetScript("OnClick", function()
-    nameEditBox:SetText("")
-    nameFrame:Hide()
-    pendingData = nil
-    pendingSource = nil
-end)
-
--- ============================
--- TYPE SELECTION (Import do DB)
--- ============================
-local typeFrame = CreateFrame("Frame", nil, frame, BackdropTemplateMixin and "BackdropTemplate")
-typeFrame:SetSize(300, 50)
-typeFrame:SetPoint("CENTER", frame, "CENTER", 0, 0)
-typeFrame:SetBackdrop({
-    bgFile = "Interface\\DialogFrame\\UI-DialogBox-Background",
-    edgeFile = "Interface\\DialogFrame\\UI-DialogBox-Border",
-    tile = true, tileSize = 32, edgeSize = 32,
-    insets = { left = 11, right = 12, top = 12, bottom = 11 }
-})
-typeFrame:SetFrameLevel(frame:GetFrameLevel() + 25)
-typeFrame:Hide()
-
-local typeTitle = typeFrame:CreateFontString(nil, "OVERLAY", "GameFontNormal")
-typeTitle:SetPoint("TOP", 0, -15)
-typeTitle:SetText(L["Select node types"])
-
-local typeCheckboxes = {}
-local typeSelectedKeys = {}
-
-local btnTypeConfirm = CreateFrame("Button", nil, typeFrame, "GameMenuButtonTemplate")
-btnTypeConfirm:SetSize(100, 24)
-btnTypeConfirm:SetText(L["Import"])
-
-local btnTypeCancel = CreateFrame("Button", nil, typeFrame, "GameMenuButtonTemplate")
-btnTypeCancel:SetSize(100, 24)
-btnTypeCancel:SetText(L["Cancel"])
-
-btnTypeCancel:SetScript("OnClick", function()
-    typeFrame:Hide()
-    wipe(typeSelectedKeys)
-end)
-
-local typeErrorText = typeFrame:CreateFontString(nil, "OVERLAY", "GameFontNormalSmall")
-typeErrorText:SetTextColor(1, 0.2, 0.2)
-
--- Forward declaration
-local BuildImportList
-
--- Mostra diálogo de nome e salva ao confirmar
-local function ShowNameDialog(parsedData, source)
-    pendingData = parsedData
-    pendingSource = source
-    nameInfoText:SetText(string.format(L["%d nodes in %d maps"], parsedData.totalNodes, #parsedData.mapList))
-    nameEditBox:SetText("")
-    nameFrame:Show()
-    nameEditBox:SetFocus()
+local onChange
+function M:SetOnChange(callback)
+    onChange = callback
 end
 
-btnNameConfirm:SetScript("OnClick", function()
-    local name = nameEditBox:GetText()
+local function Changed()
+    if onChange then onChange() end
+end
+
+local function CreateDialog(name, width, height, title)
+    local d = T:CreateWindow(name, width, height, title)
+    d:SetFrameStrata("DIALOG")
+    return d
+end
+
+-- -----------------------------------------------------------------------------
+-- Nome do import
+-- -----------------------------------------------------------------------------
+local nameDialog = CreateDialog("FarmBuddyImportNameDialog", 340, 150, L["Import Name"])
+local nameInfo = T:CreateText(nameDialog.body, 12, "muted")
+nameInfo:SetPoint("TOPLEFT", 14, -12)
+local nameBox = T:CreateEditBox(nameDialog.body, 312, 26)
+nameBox:SetPoint("TOPLEFT", 14, -32)
+local nameSave = T:CreateButton(nameDialog.body, L["Save"], 90, 26, "primary")
+nameSave:SetPoint("BOTTOMRIGHT", -14, 12)
+local nameCancel = T:CreateButton(nameDialog.body, L["Cancel"], 90, 26, "secondary")
+nameCancel:SetPoint("RIGHT", nameSave, "LEFT", -6, 0)
+
+local pendingData, pendingSource
+
+local function ShowNameDialog(parsedData, source)
+    pendingData, pendingSource = parsedData, source
+    nameInfo:SetText(string.format(L["%d nodes in %d maps"], parsedData.totalNodes, #parsedData.mapList))
+    nameBox:SetText("")
+    nameDialog:Show()
+    nameBox:SetFocus()
+end
+
+nameSave:SetScript("OnClick", function()
+    local name = nameBox:GetText()
     if name == "" then
         name = "Import " .. date("%d/%m/%Y %H:%M")
     end
-
     if pendingData then
         FarmBuddyGatherImport:SaveImport(name, pendingData, pendingSource)
-        pendingData = nil
-        pendingSource = nil
-        nameEditBox:SetText("")
-        nameFrame:Hide()
-        BuildImportList()
         print("|cff00ff00[FarmBuddy]|r " .. string.format(L["Import '%s' saved successfully!"], name))
     end
+    pendingData, pendingSource = nil, nil
+    nameDialog:Hide()
+    Changed()
+end)
+nameBox:SetScript("OnEnterPressed", function() nameSave:Click() end)
+nameCancel:SetScript("OnClick", function()
+    pendingData, pendingSource = nil, nil
+    nameDialog:Hide()
 end)
 
-nameEditBox:SetScript("OnEnterPressed", function()
-    btnNameConfirm:Click()
-end)
+-- -----------------------------------------------------------------------------
+-- Tipos de node (import do banco do GatherMate2)
+-- -----------------------------------------------------------------------------
+local typeDialog = CreateDialog("FarmBuddyImportTypeDialog", 320, 200, L["Select node types"])
+local typeChecks = {}
+local typeSelected = {}
+local typeError = T:CreateText(typeDialog.body, 11, "warn")
+typeError:SetPoint("BOTTOMLEFT", 14, 46)
+local typeImport = T:CreateButton(typeDialog.body, L["Import"], 90, 26, "primary")
+typeImport:SetPoint("BOTTOMRIGHT", -14, 12)
+local typeCancel = T:CreateButton(typeDialog.body, L["Cancel"], 90, 26, "secondary")
+typeCancel:SetPoint("RIGHT", typeImport, "LEFT", -6, 0)
+typeCancel:SetScript("OnClick", function() typeDialog:Hide() end)
 
--- ============================
--- IMPORT FROM DB FLOW
--- ============================
-local function ShowTypeSelection()
+local NODE_LABELS = {
+    Herb = "Herbs", Mine = "Ores", Fish = "Fish", Gas = "Gases",
+    Treasure = "Treasures", Archaeology = "Archaeology", Logging = "Wood",
+}
+
+function M:ImportFromDatabase()
     local available, err = FarmBuddyGatherImport:GetAvailableTypes()
     if not available then
         print("|cffff0000[FarmBuddy]|r " .. (err or L["Unknown error"]))
         return
     end
-
-    -- Limpa checkboxes anteriores
-    for _, cb in ipairs(typeCheckboxes) do
-        cb:Hide()
-    end
-    wipe(typeCheckboxes)
-    wipe(typeSelectedKeys)
-
-    local nodeTypeLabel = {
-        ["Herb"] = L["Herbs"],
-        ["Mine"] = L["Ores"],
-        ["Fish"] = L["Fish"],
-        ["Gas"] = L["Gases"],
-        ["Treasure"] = L["Treasures"],
-        ["Archaeology"] = L["Archaeology"],
-        ["Logging"] = L["Wood"],
-    }
-
-    local yOffset = -35
-    for i, typeInfo in ipairs(available) do
-        local cb = CreateFrame("CheckButton", "FBTypeCheck" .. i, typeFrame, "UICheckButtonTemplate")
-        cb:SetPoint("TOPLEFT", 20, yOffset)
+    wipe(typeSelected)
+    for _, cb in ipairs(typeChecks) do cb:Hide() end
+    for i, info in ipairs(available) do
+        local cb = typeChecks[i]
+        if not cb then
+            cb = T:CreateCheckbox(typeDialog.body, "")
+            cb:SetPoint("TOPLEFT", 14, -14 - (i - 1) * 24)
+            typeChecks[i] = cb
+        end
+        local label = L[NODE_LABELS[info.nodeType] or info.nodeType]
+        if info.totalNodes then
+            label = label .. "  |cff888888(" .. info.totalNodes .. " nodes)|r"
+        end
+        cb:SetLabel(label)
         cb:SetChecked(true)
-        typeSelectedKeys[typeInfo.prefix] = true
-
-        local labelText = nodeTypeLabel[typeInfo.nodeType] or typeInfo.nodeType
-        if typeInfo.totalNodes then
-            labelText = labelText .. "  |cff888888(" .. typeInfo.totalNodes .. " nodes)|r"
-        end
-        if typeInfo.sources then
-            labelText = labelText .. "  |cff666666[" .. typeInfo.sources .. "]|r"
-        end
-        local cbText = _G["FBTypeCheck" .. i .. "Text"]
-        cbText:SetText(labelText)
-        cbText:ClearAllPoints()
-        cbText:SetPoint("LEFT", cb, "RIGHT", 4, 0)
-
-        cb:SetScript("OnClick", function(self)
-            typeSelectedKeys[typeInfo.prefix] = self:GetChecked()
-        end)
-
-        table.insert(typeCheckboxes, cb)
-        yOffset = yOffset - 26
+        typeSelected[info.prefix] = true
+        cb:SetScript("OnClick", function(self) typeSelected[info.prefix] = self:GetChecked() and true or nil end)
+        cb:Show()
     end
-
-    -- Ajusta tamanho do frame
-    local totalHeight = math.abs(yOffset) + 60
-    typeFrame:SetSize(300, totalHeight)
-
-    -- Reposiciona botões
-    typeErrorText:SetPoint("BOTTOMLEFT", 20, 15)
-    btnTypeConfirm:SetPoint("BOTTOMRIGHT", -20, 10)
-    btnTypeCancel:SetPoint("RIGHT", btnTypeConfirm, "LEFT", -5, 0)
-
-    typeErrorText:SetText("")
-    typeFrame:Show()
+    typeDialog:SetHeight(36 + 14 + #available * 24 + 70)
+    typeError:SetText("")
+    typeDialog:Show()
 end
 
-btnTypeConfirm:SetScript("OnClick", function()
-    -- Verifica se pelo menos um tipo foi selecionado
-    local hasSelection = false
-    for _, selected in pairs(typeSelectedKeys) do
-        if selected then
-            hasSelection = true
-            break
-        end
-    end
-
-    if not hasSelection then
-        typeErrorText:SetText(L["Select at least one type."])
+typeImport:SetScript("OnClick", function()
+    if not next(typeSelected) then
+        typeError:SetText(L["Select at least one type."])
         return
     end
-
-    local filter = {}
-    for dbKey, selected in pairs(typeSelectedKeys) do
-        if selected then
-            filter[dbKey] = true
-        end
-    end
-
-    local parsedData, err = FarmBuddyGatherImport:ParseFromDB(filter)
+    local parsedData, err = FarmBuddyGatherImport:ParseFromDB(typeSelected)
     if not parsedData then
-        typeErrorText:SetText(err or L["Error importing"])
+        typeError:SetText(err or L["Error importing"])
         return
     end
-
-    typeFrame:Hide()
+    typeDialog:Hide()
     ShowNameDialog(parsedData, "gathermate2db")
 end)
 
-btnFromDB:SetScript("OnClick", function()
-    ShowTypeSelection()
-end)
+-- -----------------------------------------------------------------------------
+-- Colar string
+-- -----------------------------------------------------------------------------
+local pasteDialog = CreateDialog("FarmBuddyImportPasteDialog", 420, 260, L["Paste the GatherMate2 export string"])
+local pasteArea = T:CreateTextArea(pasteDialog.body, 392, 140)
+pasteArea:SetPoint("TOPLEFT", 14, -12)
+local pasteError = T:CreateText(pasteDialog.body, 11, "warn")
+pasteError:SetPoint("TOPLEFT", pasteArea, "BOTTOMLEFT", 0, -6)
+pasteError:SetPoint("RIGHT", -14, 0)
+local pasteProcess = T:CreateButton(pasteDialog.body, L["Process"], 90, 26, "primary")
+pasteProcess:SetPoint("BOTTOMRIGHT", -14, 12)
+local pasteCancel = T:CreateButton(pasteDialog.body, L["Cancel"], 90, 26, "secondary")
+pasteCancel:SetPoint("RIGHT", pasteProcess, "LEFT", -6, 0)
+pasteCancel:SetScript("OnClick", function() pasteDialog:Hide() end)
 
--- ============================
--- IMPORT FROM STRING FLOW
--- ============================
-btnFromString:SetScript("OnClick", function()
-    pasteEditBox:SetText("")
-    pasteErrorText:SetText("")
-    scrollFrame:Hide()
-    pasteFrame:Show()
-    pasteEditBox:SetFocus()
-end)
+function M:PasteString()
+    pasteArea.editBox:SetText("")
+    pasteError:SetText("")
+    pasteDialog:Show()
+    pasteArea.editBox:SetFocus()
+end
 
-btnPasteProcess:SetScript("OnClick", function()
-    local inputText = pasteEditBox:GetText()
-    local parsedData, err = FarmBuddyGatherImport:ParseFromString(inputText)
-
+pasteProcess:SetScript("OnClick", function()
+    local parsedData, err = FarmBuddyGatherImport:ParseFromString(pasteArea.editBox:GetText())
     if not parsedData then
-        pasteErrorText:SetText(err or L["Error processing string"])
+        pasteError:SetText(err or L["Error processing string"])
         return
     end
-
-    pasteEditBox:SetText("")
-    pasteErrorText:SetText("")
-    pasteFrame:Hide()
-    scrollFrame:Show()
+    pasteDialog:Hide()
     ShowNameDialog(parsedData, "string")
 end)
 
--- ============================
--- RENAME DIALOG
--- ============================
-local renameFrame = CreateFrame("Frame", nil, frame, BackdropTemplateMixin and "BackdropTemplate")
-renameFrame:SetSize(300, 100)
-renameFrame:SetPoint("CENTER", frame, "CENTER", 0, 0)
-renameFrame:SetBackdrop({
-    bgFile = "Interface\\DialogFrame\\UI-DialogBox-Background",
-    edgeFile = "Interface\\DialogFrame\\UI-DialogBox-Border",
-    tile = true, tileSize = 32, edgeSize = 32,
-    insets = { left = 11, right = 12, top = 12, bottom = 11 }
-})
-renameFrame:SetFrameLevel(frame:GetFrameLevel() + 30)
-renameFrame:Hide()
+-- -----------------------------------------------------------------------------
+-- Renomear
+-- -----------------------------------------------------------------------------
+local renameDialog = CreateDialog("FarmBuddyImportRenameDialog", 320, 130, L["Rename Import"])
+local renameBox = T:CreateEditBox(renameDialog.body, 292, 26)
+renameBox:SetPoint("TOPLEFT", 14, -14)
+local renameSave = T:CreateButton(renameDialog.body, L["Save"], 90, 26, "primary")
+renameSave:SetPoint("BOTTOMRIGHT", -14, 12)
+local renameCancel = T:CreateButton(renameDialog.body, L["Cancel"], 90, 26, "secondary")
+renameCancel:SetPoint("RIGHT", renameSave, "LEFT", -6, 0)
+renameCancel:SetScript("OnClick", function() renameDialog:Hide() end)
+local renameIndex
 
-local renameTitle = renameFrame:CreateFontString(nil, "OVERLAY", "GameFontNormal")
-renameTitle:SetPoint("TOP", 0, -15)
-renameTitle:SetText(L["Rename Import"])
+function M:Rename(index)
+    local entry = FarmTracker:GetProfile().gatherImports[index]
+    if not entry then return end
+    renameIndex = index
+    renameBox:SetText(entry.name or "")
+    renameDialog:Show()
+    renameBox:SetFocus()
+    renameBox:HighlightText()
+end
 
-local renameEditBox = CreateFrame("EditBox", nil, renameFrame, "InputBoxTemplate")
-renameEditBox:SetSize(240, 22)
-renameEditBox:SetPoint("CENTER", 0, 0)
-renameEditBox:SetAutoFocus(true)
-
-local renameIndex = nil
-
-local btnRenameConfirm = CreateFrame("Button", nil, renameFrame, "GameMenuButtonTemplate")
-btnRenameConfirm:SetSize(100, 24)
-btnRenameConfirm:SetPoint("BOTTOMRIGHT", -20, 10)
-btnRenameConfirm:SetText(L["Save"])
-
-local btnRenameCancel = CreateFrame("Button", nil, renameFrame, "GameMenuButtonTemplate")
-btnRenameCancel:SetSize(100, 24)
-btnRenameCancel:SetPoint("RIGHT", btnRenameConfirm, "LEFT", -5, 0)
-btnRenameCancel:SetText(L["Cancel"])
-
-btnRenameCancel:SetScript("OnClick", function()
-    renameFrame:Hide()
-    renameIndex = nil
-end)
-
-btnRenameConfirm:SetScript("OnClick", function()
-    local newName = renameEditBox:GetText()
+renameSave:SetScript("OnClick", function()
+    local newName = renameBox:GetText()
     if newName ~= "" and renameIndex then
         FarmBuddyGatherImport:RenameImport(renameIndex, newName)
-        renameFrame:Hide()
-        renameIndex = nil
-        BuildImportList()
+        renameDialog:Hide()
+        Changed()
     end
 end)
+renameBox:SetScript("OnEnterPressed", function() renameSave:Click() end)
 
-renameEditBox:SetScript("OnEnterPressed", function()
-    btnRenameConfirm:Click()
-end)
+-- -----------------------------------------------------------------------------
+-- Exportar
+-- -----------------------------------------------------------------------------
+local exportDialog = CreateDialog("FarmBuddyImportExportDialog", 420, 250, L["Export Import"])
+local exportHint = T:CreateText(exportDialog.body, 11, "muted")
+exportHint:SetPoint("TOPLEFT", 14, -10)
+exportHint:SetText(L["Press Ctrl+C to copy."])
+local exportArea = T:CreateTextArea(exportDialog.body, 392, 140)
+exportArea:SetPoint("TOPLEFT", 14, -28)
+local exportClose = T:CreateButton(exportDialog.body, L["Close"], 90, 26, "secondary")
+exportClose:SetPoint("BOTTOMRIGHT", -14, 12)
+exportClose:SetScript("OnClick", function() exportDialog:Hide() end)
 
--- ============================
--- EXPORT DIALOG
--- ============================
-local exportFrame = CreateFrame("Frame", nil, frame, BackdropTemplateMixin and "BackdropTemplate")
-exportFrame:SetSize(410, 250)
-exportFrame:SetPoint("CENTER", frame, "CENTER", 0, 0)
-exportFrame:SetBackdrop({
-    bgFile = "Interface\\DialogFrame\\UI-DialogBox-Background",
-    edgeFile = "Interface\\DialogFrame\\UI-DialogBox-Border",
-    tile = true, tileSize = 32, edgeSize = 32,
-    insets = { left = 11, right = 12, top = 12, bottom = 11 }
-})
-exportFrame:SetFrameLevel(frame:GetFrameLevel() + 20)
-exportFrame:Hide()
-
-local exportTitle = exportFrame:CreateFontString(nil, "OVERLAY", "GameFontNormal")
-exportTitle:SetPoint("TOP", 0, -15)
-exportTitle:SetText(L["Export Import"])
-
-local exportScrollFrame = CreateFrame("ScrollFrame", "FarmBuddyExportScroll", exportFrame, "UIPanelScrollFrameTemplate")
-exportScrollFrame:SetPoint("TOPLEFT", 15, -35)
-exportScrollFrame:SetPoint("BOTTOMRIGHT", -35, 45)
-
-local exportEditBox = CreateFrame("EditBox", "FarmBuddyExportEditBox", exportScrollFrame)
-exportEditBox:SetMultiLine(true)
-exportEditBox:SetAutoFocus(false)
-exportEditBox:SetFontObject("ChatFontNormal")
-exportEditBox:SetWidth(360)
-exportEditBox:SetScript("OnEscapePressed", function(self) self:ClearFocus() end)
-exportScrollFrame:SetScrollChild(exportEditBox)
-
-local btnExportClose = CreateFrame("Button", nil, exportFrame, "GameMenuButtonTemplate")
-btnExportClose:SetSize(100, 24)
-btnExportClose:SetPoint("BOTTOM", 0, 12)
-btnExportClose:SetText(L["Close"])
-btnExportClose:SetScript("OnClick", function()
-    exportEditBox:SetText("")
-    exportFrame:Hide()
-    scrollFrame:Show()
-end)
-
-local function ShowExportDialog(index)
-    local exportString, err = FarmBuddyGatherImport:ExportToString(index)
-    if not exportString then
+function M:Export(index)
+    local text, err = FarmBuddyGatherImport:ExportToString(index)
+    if not text then
         print("|cffff0000[FarmBuddy]|r " .. (err or L["Error exporting"]))
         return
     end
-
-    scrollFrame:Hide()
-    exportEditBox:SetText(exportString)
-    exportFrame:Show()
-    exportEditBox:SetFocus()
-    exportEditBox:HighlightText()
+    exportArea.editBox:SetText(text)
+    exportDialog:Show()
+    exportArea.editBox:SetFocus()
+    exportArea.editBox:HighlightText()
 end
 
--- ============================
--- IMPORT LIST
--- ============================
-BuildImportList = function()
-    for _, f in ipairs(listFrames) do
-        f:Hide()
-    end
-    wipe(listFrames)
-
-    local profile = FarmTracker:GetProfile()
-    local imports = profile.gatherImports or {}
-
-    if #imports == 0 then
-        local emptyText = scrollChild:CreateFontString(nil, "OVERLAY", "GameFontHighlight")
-        emptyText:SetPoint("CENTER", scrollChild, "TOP", 0, -60)
-        emptyText:SetText(L["No saved imports.\nUse the buttons above to import GatherMate2 data."])
-
-        local wrapper = CreateFrame("Frame", nil, scrollChild)
-        wrapper:SetSize(390, 120)
-        wrapper:SetPoint("TOPLEFT", 0, 0)
-        table.insert(listFrames, wrapper)
-
-        scrollChild:SetHeight(120)
-        return
-    end
-
-    local yOffset = 0
-
-    for i, importData in ipairs(imports) do
-        -- Container da entrada
-        local row = CreateFrame("Frame", nil, scrollChild)
-        row:SetSize(390, 70)
-        row:SetPoint("TOPLEFT", 0, -yOffset)
-
-        local rowBg = row:CreateTexture(nil, "BACKGROUND")
-        rowBg:SetAllPoints()
-        rowBg:SetColorTexture(0.15, 0.15, 0.15, 0.5)
-
-        -- Nome
-        local nameLabel = row:CreateFontString(nil, "OVERLAY", "GameFontNormal")
-        nameLabel:SetPoint("TOPLEFT", 10, -5)
-        nameLabel:SetText("|cff00ff00" .. (importData.name or L["Unnamed"]) .. "|r")
-
-        -- Info
-        local infoLabel = row:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
-        infoLabel:SetPoint("TOPLEFT", 10, -22)
-
-        local mapCount = importData.mapList and #importData.mapList or 0
-        local sourceLabel = importData.source == "gathermate2db" and "GatherMate2" or "String"
-        infoLabel:SetText(string.format(L["%d nodes  |  %d maps  |  %s  |  %s"],
-            importData.totalNodes or 0,
-            mapCount,
-            sourceLabel,
-            importData.createdAt or "?"
-        ))
-
-        -- Botão Ver Mapa
-        local btnView = CreateFrame("Button", nil, row, "GameMenuButtonTemplate")
-        btnView:SetSize(80, 20)
-        btnView:SetPoint("BOTTOMLEFT", 10, 5)
-        btnView:SetText(L["View Map"])
-        btnView:SetScript("OnClick", function()
-            if FarmBuddyMapPreview then
-                FarmBuddyMapPreview:Show(importData)
-            end
-        end)
-
-        -- Botão Renomear
-        local btnRename = CreateFrame("Button", nil, row, "GameMenuButtonTemplate")
-        btnRename:SetSize(80, 20)
-        btnRename:SetPoint("LEFT", btnView, "RIGHT", 5, 0)
-        btnRename:SetText(L["Rename"])
-        btnRename:SetScript("OnClick", function()
-            renameIndex = i
-            renameEditBox:SetText(importData.name or "")
-            renameFrame:Show()
-            renameEditBox:SetFocus()
-        end)
-
-        -- Botão Exportar
-        local btnExport = CreateFrame("Button", nil, row, "GameMenuButtonTemplate")
-        btnExport:SetSize(70, 20)
-        btnExport:SetPoint("LEFT", btnRename, "RIGHT", 5, 0)
-        btnExport:SetText(L["Export"])
-        btnExport:SetScript("OnClick", function()
-            ShowExportDialog(i)
-        end)
-
-        -- Botão Excluir
-        local btnDelete = CreateFrame("Button", nil, row, "GameMenuButtonTemplate")
-        btnDelete:SetSize(70, 20)
-        btnDelete:SetPoint("LEFT", btnExport, "RIGHT", 5, 0)
-        btnDelete:SetText(L["Delete"])
-        btnDelete:SetScript("OnClick", function()
-            StaticPopupDialogs["FARMBUDDY_DELETE_IMPORT"] = {
-                text = string.format(L["Delete import '%s'?"], importData.name or ""),
-                button1 = L["Yes"],
-                button2 = L["No"],
-                OnAccept = function()
-                    FarmBuddyGatherImport:DeleteImport(i)
-                    BuildImportList()
-                end,
-                timeout = 0,
-                whileDead = true,
-                hideOnEscape = true,
-            }
-            StaticPopup_Show("FARMBUDDY_DELETE_IMPORT")
-        end)
-
-        table.insert(listFrames, row)
-        yOffset = yOffset + 75
-    end
-
-    scrollChild:SetHeight(math.max(yOffset + 10, 1))
+-- -----------------------------------------------------------------------------
+-- Excluir / ver mapa
+-- -----------------------------------------------------------------------------
+function M:Delete(index)
+    local entry = FarmTracker:GetProfile().gatherImports[index]
+    if not entry then return end
+    StaticPopupDialogs["FARMBUDDY_DELETE_IMPORT"] = {
+        text = string.format(L["Delete import '%s'?"], entry.name or ""),
+        button1 = L["Yes"],
+        button2 = L["No"],
+        OnAccept = function()
+            FarmBuddyGatherImport:DeleteImport(index)
+            Changed()
+        end,
+        timeout = 0,
+        whileDead = true,
+        hideOnEscape = true,
+    }
+    StaticPopup_Show("FARMBUDDY_DELETE_IMPORT")
 end
 
--- API Pública
-function FarmBuddyImportManager:Toggle()
-    if frame:IsShown() then
-        frame:Hide()
-    else
-        -- Esconde sub-frames
-        pasteFrame:Hide()
-        nameFrame:Hide()
-        typeFrame:Hide()
-        renameFrame:Hide()
-        exportFrame:Hide()
-        scrollFrame:Show()
-        BuildImportList()
-        frame:Show()
+function M:ViewMap(index)
+    local entry = FarmTracker:GetProfile().gatherImports[index]
+    if entry and FarmBuddyMapPreview then
+        FarmBuddyMapPreview:Show(entry)
+    end
+end
+
+-- Compatibilidade: abre Settings direto na seção de perfis
+function M:Toggle()
+    if TrackerSettings and TrackerSettings.Open then
+        TrackerSettings:Open("profiles")
     end
 end

@@ -4,16 +4,19 @@ World of Warcraft addon for tracking farming sessions, automatically capturing l
 
 ## Features
 
-- **Farming sessions** — Start, pause and stop sessions with a live timer
-- **Automatic loot capture** — Items are automatically logged during the session
-- **Category filters** — Accordion-style category checkboxes to filter what gets tracked
+- **Farming sessions** — Start, pause and stop sessions with a live timer, item count, estimated value and gold per hour in one window
+- **Time limit or free mode** — Set a time limit (hours, minutes, seconds or quick presets) with an alarm and optional auto-stop, or farm in free mode with no limit; elapsed time is always recorded
+- **Automatic loot capture** — Items are automatically logged during the session, grouped by category
+- **Category filters** — Searchable filters by item type to choose what shows up in the loot list
 - **Profit estimation** — Integrates with TSM and Auctionator for market pricing
-- **Session history** — Full history viewer with items, duration and estimated value
-- **Per-character profiles** — Each character keeps its own settings and history
+- **Session history** — Sessions grouped by day, each with duration, items, estimated value, gold per hour and the mode used
+- **Themes and fonts** — Blizzard, Dark and Parchment themes, game fonts (plus LibSharedMedia fonts), font size, window scale and background opacity
+- **Alarm sounds** — Choose the alarm sound and channel, with a 5-minute warning, on-screen message and taskbar flash
+- **Per-character profiles** — Each character keeps its own settings and history; copy settings from another character or move them with an export string
 - **Localization** — Interface in English and Brazilian Portuguese (follows the game client language)
 - **Multi-version** — Runs on Retail, WoW: Forever, MoP Classic, TBC Anniversary and Classic Era from a single package
 - **Minimap button** — Quick access via LibDataBroker + LibDBIcon
-- **Import Manager** — Import GatherMate2 data with a map preview
+- **GatherMate2 import** — Import GatherMate2 data (from its database or an export string) in Settings > Profiles, with a map preview
 - **Data export** — Export gathering data in a compressed format
 - **Mob Map** — Visual map of farmable mobs per zone with filters by profession (Skinning/Tailoring)
 - **Mob portraits** — Real 3D mob portraits on the map via displayID tables, with icon fallback by type
@@ -29,6 +32,7 @@ World of Warcraft addon for tracking farming sessions, automatically capturing l
 ## Slash Commands
 
 - `/farmbuddy` — Toggle the main window
+- `/farmbuddy changelog` — Show what's new in this version
 
 ## Installation
 
@@ -64,14 +68,20 @@ FarmBuddy is free software: you can redistribute it and/or modify it under the t
 
 ## Changelog
 
+### v1.10.0
+
+- **New look** — Every window was redesigned in a Blizzard-style frame with clearer spacing; the loot list now lives inside the main window
+- **Time limit and free mode** — New Timer and Time limit tabs: set a limit with an alarm and optional auto-stop, or farm in free mode. The mode is locked while a session runs
+- **New history** — Sessions grouped by day with a detail panel (duration, items, value, gold per hour, mode); delete one session or clear all
+- **New settings** — Appearance (themes, fonts, scale, opacity), Alerts (alarm sound and channel), searchable Filters and Profiles (copy from another character, export/import string, GatherMate2 imports)
+- **What's new window** — The changelog shows up once after each update; type `/farmbuddy changelog` to open it again
+- **Fix: main window after /reload** — The main window now stays open after a reload if it was open before
+
 ### v1.9.0
+
 - **Extension support** — New public API (`FarmBuddyAPI`) that lets separate addons add mob data to FarmBuddy. Version-specific data no longer needs to ship with the base addon, keeping Retail light
 - **FarmBuddy: Forever** — First extension, released as its own project: classic zone mob database for WoW: Forever
 
 ### v1.8.1
-- **Fix: history values changing after AH scans** — Completed sessions now store each item's price at the moment the session ends, so new Auction House scans no longer change the gold value of past sessions. This makes it possible to compare how much was farmed between sessions. Sessions saved before this version are frozen once, using the prices at the first login after the update
 
-### v1.8.0
-- **Classic & Forever support** — FarmBuddy now loads on WoW: Forever, MoP Classic, TBC Anniversary and Classic Era, in addition to Retail, using a multi-version TOC
-- **Retail interface bump** — TOC updated to the current Retail patch so the addon is no longer flagged as out of date
-- **Compatibility fix** — Import Manager checkboxes now use a template available on every game version
+- **Fix: history values changing after AH scans** — Completed sessions now store each item's price at the moment the session ends, so new Auction House scans no longer change the gold value of past sessions. This makes it possible to compare how much was farmed between sessions. Sessions saved before this version are frozen once, using the prices at the first login after the update
