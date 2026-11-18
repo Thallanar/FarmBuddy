@@ -222,7 +222,8 @@ function FarmBuddyGatherImport:ParseFromString(inputString)
         return nil, string.format(L["%s not found."], "LibBase64-1.0")
     end
 
-    local ok, decoded = pcall(LibBase64.Decode, LibBase64, inputString)
+    -- A lib define encode/decode em minúsculo (Encode/Decode não existem)
+    local ok, decoded = pcall(LibBase64.decode or LibBase64.Decode, LibBase64, inputString)
     if not ok or not decoded then
         return nil, L["Error decoding Base64: "] .. tostring(decoded)
     end
@@ -375,7 +376,7 @@ function FarmBuddyGatherImport:ExportToString(index)
     end
 
     local encoded
-    ok, encoded = pcall(LibBase64.Encode, LibBase64, compressed)
+    ok, encoded = pcall(LibBase64.encode or LibBase64.Encode, LibBase64, compressed)
     if not ok or not encoded then
         return nil, L["Error encoding Base64: "] .. tostring(encoded)
     end

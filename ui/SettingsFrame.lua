@@ -222,7 +222,7 @@ do
     pv1:SetText(L["Peacebloom"] .. " x84")
     local pv2 = T:CreateText(preview, 12, "text")
     pv2:SetPoint("TOPLEFT", pv1, "BOTTOMLEFT", 0, -4)
-    pv2:SetText("01:24:37 · 1,284" .. T.COIN .. " · 912" .. T.COIN .. " " .. L["per hour"])
+    pv2:SetText("01:24:37 · " .. T:FormatMoney(12843712) .. " · " .. T:FormatMoney(9120455) .. " " .. L["per hour"])
 
     -- Escala e opacidade
     AddLabel(page, L["Window scale"], 0, -334)

@@ -165,10 +165,10 @@ local modeText = T:CreateText(modeChip, 11, "text")
 modeText:SetPoint("CENTER")
 modeText:SetJustifyH("CENTER")
 
-local statDefs = { L["Duration"], L["Items"], L["Est. value"], L["Gold / hour"] }
+local statDefs = { L["Duration"], L["Items"], L["Est. value"] }
 local stats = {}
 local detailWidth = WIDTH - 4 - NAV_W - 28
-local statW = (detailWidth - 18) / 4
+local statW = (detailWidth - 12) / 3
 for i, label in ipairs(statDefs) do
     local box = T:CreateStatBox(detail, label, 16)
     box:SetSize(statW, 48)
@@ -226,7 +226,7 @@ local function AcquireItem(i)
     r.value = T:CreateText(r, 12, "text")
     r.value:SetPoint("RIGHT", -12, 0)
     r.value:SetJustifyH("RIGHT")
-    r.value:SetWidth(90)
+    r.value:SetWidth(140)
     r.count = T:CreateText(r, 13, "white")
     r.count:SetPoint("RIGHT", r.value, "LEFT", -8, 0)
     r.count:SetJustifyH("RIGHT")
@@ -304,11 +304,9 @@ local function ShowDetail(session)
     stats[1]:SetValue(T:FormatClock(duration))
     stats[2]:SetValue(tostring(CountItems(session.lootTable)))
     if value then
-        stats[3]:SetValue(T:FormatGold(value), true)
-        stats[4]:SetValue(duration >= 60 and T:FormatGold(value / (duration / 3600)) or "—", duration >= 60)
+        stats[3]:SetValue(T:FormatMoney(value))
     else
         stats[3]:SetValue("—")
-        stats[4]:SetValue("—")
     end
 
     if session.valueFrozen then
@@ -361,7 +359,7 @@ local function ShowDetail(session)
             r.name:SetTextColor(qr, qg, qb)
             r.count:SetText("x" .. (data.count or 0))
             local price = GetSessionItemPrice(data, entry.id)
-            r.value:SetText(price and (T:FormatGold(price * (data.count or 0)) .. T.COIN) or "—")
+            r.value:SetText(price and T:FormatMoney(price * (data.count or 0)) or "—")
             r:Show()
             y = y + 30
         end
@@ -434,7 +432,7 @@ Build = function()
         b.time:SetText(ts and date("%H:%M", ts) or (session.startTime or "?"):match("(%d+:%d+)") or "?")
         b.dur:SetText(ShortDuration(session.duration or 0))
         b.items:SetText(string.format(L["%d items"], CountItems(session.lootTable)))
-        b.gold:SetText(value and (T:FormatGold(value) .. T.COIN) or "")
+        b.gold:SetText(value and T:FormatMoney(value) or "")
         b:SetSelected(idx == selectedIndex)
         b:SetScript("OnClick", function()
             selectedIndex = idx
@@ -448,7 +446,7 @@ Build = function()
     navScroll:SetContentHeight(y + 4)
 
     navCount:SetText(string.format(L["%d sessions"], #history))
-    navTotal:SetText(grandTotal > 0 and (T:FormatGold(grandTotal) .. T.COIN) or "")
+    navTotal:SetText(grandTotal > 0 and T:FormatMoney(grandTotal) or "")
 
     ShowDetail(history[selectedIndex])
 end
