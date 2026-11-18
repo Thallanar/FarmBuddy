@@ -2,10 +2,10 @@
 ## Title: FarmBuddy: |cffffd100Forever|r
 ## Notes: Classic zone mob database for FarmBuddy on WoW: Forever
 ## Notes-ptBR: Banco de mobs das zonas clássicas para o FarmBuddy no WoW: Forever
-## Version: 1.0.0
+## Version: 1.0.1
 ## Author: Thallanar
 ## X-License: GPLv3
-## IconTexture: Interface\AddOns\FarmBuddy\icon\gear
+## IconTexture: Interface\AddOns\FarmBuddy\icon\logo.png
 ## Group: FarmBuddy
 ## Dependencies: FarmBuddy
 

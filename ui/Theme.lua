@@ -476,9 +476,13 @@ function T:CreateNavButton(parent, height)
     return b
 end
 
--- Aba pendurada embaixo da janela (estilo janela de personagem)
+-- Aba pendurada embaixo da janela (estilo janela de personagem).
+-- Sem borda de cima: a aba sai logo abaixo da moldura, sem sobrepor a borda
+-- da janela. Abas vizinhas compartilham a borda lateral (ver T:TabOverlap).
+local TAB_EDGE = 2
 function T:CreateTab(parent, text)
     local b = CreateFrame("Button", nil, parent, BACKDROP_TEMPLATE)
+    b:SetBackdrop({ bgFile = WHITE })
     local label = self:CreateText(b, 13, "muted")
     label:SetPoint("CENTER", 0, 1)
     label:SetJustifyH("CENTER")
@@ -486,22 +490,47 @@ function T:CreateTab(parent, text)
     b.label = label
     b:SetSize(math.max(80, label:GetStringWidth() + 32), 30)
     b.fbSelected = false
+
+    local left = b:CreateTexture(nil, "BORDER")
+    left:SetPoint("TOPLEFT")
+    left:SetPoint("BOTTOMLEFT")
+    local right = b:CreateTexture(nil, "BORDER")
+    right:SetPoint("TOPRIGHT")
+    right:SetPoint("BOTTOMRIGHT")
+    local bottom = b:CreateTexture(nil, "BORDER")
+    bottom:SetPoint("BOTTOMLEFT")
+    bottom:SetPoint("BOTTOMRIGHT")
+    b.edges = { left, right, bottom }
+
     self:Register(b, function(tab)
-        T:ApplyEdge(tab, 2, true)
+        local e = T:PixelSize(tab, TAB_EDGE)
+        left:SetWidth(e)
+        right:SetWidth(e)
+        bottom:SetHeight(e)
+        local role = tab.fbSelected and "border" or "borderMid"
+        for _, edge in ipairs(tab.edges) do
+            edge:SetColorTexture(T:Color(role))
+        end
         if tab.fbSelected then
             tab:SetBackdropColor(T:Color("header"))
-            tab:SetBackdropBorderColor(T:Color("border"))
             T:SetTextRole(tab.label, "accent")
             tab:SetHeight(30)
+            -- A aba selecionada fica por cima da vizinha na borda compartilhada
+            tab:SetFrameLevel(tab:GetParent():GetFrameLevel() + 3)
         else
             tab:SetBackdropColor(T:Color("secondary"))
-            tab:SetBackdropBorderColor(T:Color("borderMid"))
             T:SetTextRole(tab.label, "muted")
             tab:SetHeight(26)
+            tab:SetFrameLevel(tab:GetParent():GetFrameLevel() + 2)
         end
     end)
     function b:SetSelected(v) self.fbSelected = v and true or false; T:Repaint(self) end
     return b
+end
+
+-- Deslocamento para abas vizinhas dividirem a mesma borda lateral
+function T:TabOverlap(tab)
+    return -self:PixelSize(tab, TAB_EDGE)
 end
 
 -- -----------------------------------------------------------------------------
