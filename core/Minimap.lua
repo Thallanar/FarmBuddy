@@ -1,11 +1,14 @@
-local FarmBuddyDB = FarmBuddyDB or {}
+-- =============================================================================
+-- FarmBuddy - Botão do minimapa (LibDataBroker + LibDBIcon)
+-- =============================================================================
 
-local LDB = LibStub("LibDataBroker-1.1"):NewDataObject("Farm Buddy", 
-{
+local LOGO = "Interface\\AddOns\\FarmBuddy\\icon\\logo.png"
+
+local LDB = LibStub("LibDataBroker-1.1"):NewDataObject("Farm Buddy", {
     type = "data source",
     text = "Farm Buddy",
-    icon = "Interface\\Icons\\inv_misc_herb_felblossom",
-    OnClick = function(_, button)
+    icon = LOGO,
+    OnClick = function()
         if FarmTracker.frame:IsShown() then
             FarmTracker.frame:Hide()
         else
@@ -18,5 +21,14 @@ local LDB = LibStub("LibDataBroker-1.1"):NewDataObject("Farm Buddy",
     end,
 })
 
-local icon = LibStub("LibDBIcon-1.0")
-icon:Register("Farm Buddy", LDB, FarmBuddyDB)
+-- Registra só depois das SavedVariables carregarem: o LibDBIcon grava a
+-- posição do ícone na tabela recebida, que precisa ser a salva
+-- (antes era uma tabela local e a posição se perdia a cada reload).
+local loader = CreateFrame("Frame")
+loader:RegisterEvent("ADDON_LOADED")
+loader:SetScript("OnEvent", function(self, _, addonName)
+    if addonName ~= "FarmBuddy" then return end
+    self:UnregisterEvent("ADDON_LOADED")
+    FarmBuddyDB.minimap = FarmBuddyDB.minimap or {}
+    LibStub("LibDBIcon-1.0"):Register("Farm Buddy", LDB, FarmBuddyDB.minimap)
+end)

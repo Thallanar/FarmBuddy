@@ -33,6 +33,9 @@ GPLv3, same as FarmBuddy.
 
 ## Changelog
 
+### v1.0.1
+- **New icon** — The addon list now shows the FarmBuddy logo
+
 ### v1.0.0
 - **Initial release** — 10 zones and 754 hostile mobs on the Mob Map
   - **Kalimdor:** Teldrassil, Mulgore, Durotar, Darkshore

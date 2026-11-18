@@ -68,6 +68,13 @@ FarmBuddy is free software: you can redistribute it and/or modify it under the t
 
 ## Changelog
 
+### v1.10.2
+
+- **New logo** — FarmBuddy's own logo on the minimap button and in the addon list (FarmBuddy: Forever too)
+- **New Mob Map icon** — The Mob Map button uses a gold map icon that matches the other buttons
+- **Tabs polish** — The Timer and Time limit tabs line up with the window edge, sit right under the frame and share their border
+- **Fix: minimap icon position** — The minimap button now remembers where you dragged it
+
 ### v1.10.1
 
 - **Fix: full gold values** — Estimated value, gold per hour, item prices and history totals now show gold, silver and copper instead of whole gold only
@@ -83,8 +90,3 @@ FarmBuddy is free software: you can redistribute it and/or modify it under the t
 - **New settings** — Appearance (themes, fonts, scale, opacity), Alerts (alarm sound and channel), searchable Filters and Profiles (copy from another character, export/import string, GatherMate2 imports)
 - **What's new window** — The changelog shows up once after each update; type `/farmbuddy changelog` to open it again
 - **Fix: main window after /reload** — The main window now stays open after a reload if it was open before
-
-### v1.9.0
-
-- **Extension support** — New public API (`FarmBuddyAPI`) that lets separate addons add mob data to FarmBuddy. Version-specific data no longer needs to ship with the base addon, keeping Retail light
-- **FarmBuddy: Forever** — First extension, released as its own project: classic zone mob database for WoW: Forever

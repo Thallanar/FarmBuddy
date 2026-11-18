@@ -34,9 +34,8 @@ historyButton:SetScript("OnClick", function()
     if FarmBuddyHistory then FarmBuddyHistory:Toggle() end
 end)
 
-local mobMapButton = T:CreateIconButton(f.header, "Interface\\Icons\\Ability_Druid_PrimalPrecision", 26, 18,
+local mobMapButton = T:CreateIconButton(f.header, ICON_PATH .. "mobmap.png", 26, 18,
     L["Mob Map"], L["Skinning & Tailoring"])
-mobMapButton.icon:SetTexCoord(0.08, 0.92, 0.08, 0.92)
 mobMapButton:SetPoint("RIGHT", historyButton, "LEFT", -2, 0)
 mobMapButton:SetScript("OnClick", function()
     if FarmBuddyMapPreview and FarmBuddyMobTracker then
@@ -254,9 +253,17 @@ lockText:SetPoint("RIGHT", clearButton, "LEFT", -6, 0)
 -- Abas
 -- -----------------------------------------------------------------------------
 local timerTab = T:CreateTab(f, L["Timer"])
-timerTab:SetPoint("TOPLEFT", f, "BOTTOMLEFT", 14, 2)
 local limitTab = T:CreateTab(f, L["Time limit"])
-limitTab:SetPoint("TOPLEFT", timerTab, "TOPRIGHT", 2, 0)
+
+-- Primeira aba alinhada à borda esquerda, logo abaixo da moldura; a segunda
+-- encosta na primeira dividindo a borda lateral
+local function AnchorTabs()
+    timerTab:ClearAllPoints()
+    timerTab:SetPoint("TOPLEFT", f, "BOTTOMLEFT", 0, 0)
+    limitTab:ClearAllPoints()
+    limitTab:SetPoint("TOPLEFT", timerTab, "TOPRIGHT", T:TabOverlap(limitTab), 0)
+end
+AnchorTabs()
 
 local activeTab = "timer"
 local Refresh
@@ -446,6 +453,7 @@ end)
 T:OnChange(function()
     timerTab:SetWidth(math.max(80, timerTab.label:GetStringWidth() + 32))
     limitTab:SetWidth(math.max(80, limitTab.label:GetStringWidth() + 32))
+    AnchorTabs()
     if f:IsShown() then Refresh() end
 end)
 
