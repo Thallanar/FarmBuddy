@@ -189,7 +189,7 @@ function DisplayItem:UpdateDisplay(lootTable)
                 r.iconFrame:SetBackdropBorderColor(qr, qg, qb, 0.9)
                 r.count:SetText("x" .. (data.count or 0))
                 if entry.price then
-                    r.price:SetText(string.format(L["%s each"], string.format("%.2f", entry.price / 10000) .. T.COIN))
+                    r.price:SetText(string.format(L["%s each"], T:FormatMoney(entry.price)))
                 else
                     r.price:SetText(L["No price"])
                 end

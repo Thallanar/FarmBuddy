@@ -284,7 +284,9 @@ end
 -- Janela
 -- -----------------------------------------------------------------------------
 -- Retorna o frame; o conteúdo vai em frame.body (abaixo do header).
-function T:CreateWindow(name, width, height, title)
+-- keepOpen = true: a janela não entra no UISpecialFrames, então nem o ESC nem
+-- painéis que fecham as janelas abertas (mapa-múndi etc.) a fecham.
+function T:CreateWindow(name, width, height, title, keepOpen)
     local f = CreateFrame("Frame", name, UIParent, BACKDROP_TEMPLATE)
     f:SetSize(width, height)
     f:SetPoint("CENTER")
@@ -359,8 +361,8 @@ function T:CreateWindow(name, width, height, title)
     f.closeButton = closeButton
     f.body = body
 
-    -- ESC fecha a janela
-    if name then
+    -- ESC fecha a janela (exceto as que devem ficar abertas)
+    if name and not keepOpen then
         table.insert(UISpecialFrames, name)
     end
 
@@ -805,9 +807,34 @@ end
 -- -----------------------------------------------------------------------------
 -- Blocos de estatística e dinheiro
 -- -----------------------------------------------------------------------------
-local GOLD_ICON = "Interface\\MoneyFrame\\UI-GoldIcon"
--- Ícone de moeda inline para usar dentro de textos
-T.COIN = "|T" .. GOLD_ICON .. ":0:0:2:0|t"
+local function CoinIcon(path)
+    return "|T" .. path .. ":0:0:1:0|t"
+end
+T.GOLD = CoinIcon("Interface\\MoneyFrame\\UI-GoldIcon")
+T.SILVER = CoinIcon("Interface\\MoneyFrame\\UI-SilverIcon")
+T.COPPER = CoinIcon("Interface\\MoneyFrame\\UI-CopperIcon")
+
+-- Separador de milhar (1234567 → 1,234,567)
+local function Group(n)
+    local formatted = tostring(n):reverse():gsub("(%d%d%d)", "%1,"):reverse()
+    if formatted:sub(1, 1) == "," then formatted = formatted:sub(2) end
+    return formatted
+end
+
+-- Valor completo em ouro, prata e cobre com os ícones de moeda do jogo.
+-- Partes zeradas são omitidas (como no próprio jogo); 0 vira "0 cobre".
+function T:FormatMoney(copper)
+    copper = math.floor((copper or 0) + 0.5)
+    if copper < 0 then copper = 0 end
+    local gold = math.floor(copper / 10000)
+    local silver = math.floor((copper % 10000) / 100)
+    local rest = copper % 100
+    local parts = {}
+    if gold > 0 then table.insert(parts, Group(gold) .. T.GOLD) end
+    if silver > 0 then table.insert(parts, silver .. T.SILVER) end
+    if rest > 0 or #parts == 0 then table.insert(parts, rest .. T.COPPER) end
+    return table.concat(parts, " ")
+end
 
 function T:CreateStatBox(parent, label, valueSize)
     local box = self:CreatePanel(parent, "panel", "borderDim")
@@ -816,39 +843,28 @@ function T:CreateStatBox(parent, label, valueSize)
     l:SetText(label)
     local v = self:CreateText(box, valueSize or 18, "white")
     v:SetPoint("TOPLEFT", l, "BOTTOMLEFT", 0, -4)
-    local coin = box:CreateTexture(nil, "OVERLAY")
-    coin:SetSize(11, 11)
-    coin:SetTexture(GOLD_ICON)
-    coin:SetPoint("LEFT", v, "RIGHT", 4, 0)
-    coin:Hide()
+    v:SetWordWrap(false)
     box.label = l
     box.value = v
-    box.coin = coin
-    function box:SetValue(text, showCoin)
-        self.value:SetText(text)
-        self.coin:SetShown(showCoin and true or false)
+    box.valueBase = valueSize or 18
+
+    -- Reduz a fonte até o valor caber no bloco (valores longos em ouro)
+    function box:FitValue()
+        v.fbSize = self.valueBase
+        T:Repaint(v)
+        local max = self:GetWidth() - 16
+        if max <= 0 then return end
+        while v:GetStringWidth() > max and v.fbSize > 9 do
+            v.fbSize = v.fbSize - 1
+            T:Repaint(v)
+        end
+    end
+
+    function box:SetValue(text)
+        v:SetText(text)
+        self:FitValue()
     end
     return box
-end
-
--- Texto de ouro com ícone de moeda ao lado
-function T:CreateGoldText(parent, size, role)
-    local fs = self:CreateText(parent, size or 12, role or "text")
-    local coin = parent:CreateTexture(nil, "OVERLAY")
-    coin:SetSize(10, 10)
-    coin:SetTexture(GOLD_ICON)
-    coin:SetPoint("LEFT", fs, "RIGHT", 3, 0)
-    fs.coin = coin
-    return fs
-end
-
--- Formata cobre em ouro inteiro com separador de milhar
-function T:FormatGold(copper)
-    local gold = math.floor((copper or 0) / 10000)
-    local s = tostring(gold)
-    local formatted = s:reverse():gsub("(%d%d%d)", "%1,"):reverse()
-    if formatted:sub(1, 1) == "," then formatted = formatted:sub(2) end
-    return formatted
 end
 
 -- hh:mm:ss

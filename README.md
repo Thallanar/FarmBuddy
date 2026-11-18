@@ -9,7 +9,7 @@ World of Warcraft addon for tracking farming sessions, automatically capturing l
 - **Automatic loot capture** — Items are automatically logged during the session, grouped by category
 - **Category filters** — Searchable filters by item type to choose what shows up in the loot list
 - **Profit estimation** — Integrates with TSM and Auctionator for market pricing
-- **Session history** — Sessions grouped by day, each with duration, items, estimated value, gold per hour and the mode used
+- **Session history** — Sessions grouped by day, each with duration, items, estimated value and the mode used
 - **Themes and fonts** — Blizzard, Dark and Parchment themes, game fonts (plus LibSharedMedia fonts), font size, window scale and background opacity
 - **Alarm sounds** — Choose the alarm sound and channel, with a 5-minute warning, on-screen message and taskbar flash
 - **Per-character profiles** — Each character keeps its own settings and history; copy settings from another character or move them with an export string
@@ -68,6 +68,13 @@ FarmBuddy is free software: you can redistribute it and/or modify it under the t
 
 ## Changelog
 
+### v1.10.1
+
+- **Fix: full gold values** — Estimated value, gold per hour, item prices and history totals now show gold, silver and copper instead of whole gold only
+- **Fix: GatherMate2 string import/export** — Pasting or exporting a GatherMate2 string no longer fails with a Base64 error
+- **Fix: main window closing by itself** — Pressing ESC or opening the world map no longer closes the main window; use its close button or `/farmbuddy`
+- **Simpler history** — The history detail no longer shows gold per hour
+
 ### v1.10.0
 
 - **New look** — Every window was redesigned in a Blizzard-style frame with clearer spacing; the loot list now lives inside the main window
@@ -81,7 +88,3 @@ FarmBuddy is free software: you can redistribute it and/or modify it under the t
 
 - **Extension support** — New public API (`FarmBuddyAPI`) that lets separate addons add mob data to FarmBuddy. Version-specific data no longer needs to ship with the base addon, keeping Retail light
 - **FarmBuddy: Forever** — First extension, released as its own project: classic zone mob database for WoW: Forever
-
-### v1.8.1
-
-- **Fix: history values changing after AH scans** — Completed sessions now store each item's price at the moment the session ends, so new Auction House scans no longer change the gold value of past sessions. This makes it possible to compare how much was farmed between sessions. Sessions saved before this version are frozen once, using the prices at the first login after the update

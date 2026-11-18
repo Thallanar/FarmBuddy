@@ -8,11 +8,12 @@
 local L = FarmBuddyL
 local T = FarmBuddyTheme
 
-local WIDTH, HEIGHT = 340, 560
+local WIDTH, HEIGHT = 380, 560
 local FOOTER_H = 206
 local ICON_PATH = "Interface\\AddOns\\FarmBuddy\\icon\\"
 
-local f = T:CreateWindow("FarmTrackerFrame", WIDTH, HEIGHT, "FarmBuddy")
+-- Janela principal fica aberta durante o farm: ESC e o mapa não a fecham
+local f = T:CreateWindow("FarmTrackerFrame", WIDTH, HEIGHT, "FarmBuddy", true)
 FarmTracker.frame = f
 
 -- -----------------------------------------------------------------------------
@@ -289,9 +290,9 @@ local function RefreshStats()
 
     statItems:SetValue(tostring(items))
     if hasPrices then
-        statValue:SetValue(T:FormatGold(value), true)
+        statValue:SetValue(T:FormatMoney(value))
         if elapsed >= 60 then
-            statRate:SetValue(T:FormatGold(value / (elapsed / 3600)), true)
+            statRate:SetValue(T:FormatMoney(value / (elapsed / 3600)))
         else
             statRate:SetValue("—")
         end
