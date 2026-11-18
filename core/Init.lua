@@ -117,6 +117,11 @@ local eventFrame = CreateFrame("Frame")
 eventFrame:RegisterEvent("ADDON_LOADED")
 eventFrame:SetScript("OnEvent", function(self, event, addonName)
     if addonName == "FarmBuddy" then
+        -- Instalação nova (sem perfis salvos): não mostra o changelog
+        if not FarmBuddyDB.profiles and not FarmBuddyDB.lastSeenVersion then
+            FarmBuddyDB.lastSeenVersion = FarmTracker.version
+        end
+
         C_Timer.After(3, function()
             local version = (C_AddOns and C_AddOns.GetAddOnMetadata or GetAddOnMetadata)("FarmBuddy", "Version")
             print("|cff00ff00[FarmBuddy]|r " .. string.format(FarmBuddyL["v%s loaded! Type %s to open."], version or "?", "|cff00ff00/farmbuddy|r"))
@@ -144,8 +149,26 @@ eventFrame:SetScript("OnEvent", function(self, event, addonName)
             end
         end
 
-        if TrackerSettings and TrackerSettings.frame then
-            TrackerSettings:BuildCheckboxes(FarmTracker.categoryList or {})
+        -- Migração: sessões antigas só têm startTime em texto; grava o timestamp
+        -- numérico usado para agrupar o histórico por dia
+        for _, session in ipairs(profile.sessionHistory) do
+            if not session.startTimestamp and type(session.startTime) == "string" then
+                local y, mo, d, h, mi, sec = session.startTime:match("^(%d+)-(%d+)-(%d+) (%d+):(%d+):(%d+)$")
+                if y then
+                    session.startTimestamp = time({
+                        year = tonumber(y), month = tonumber(mo), day = tonumber(d),
+                        hour = tonumber(h), min = tonumber(mi), sec = tonumber(sec),
+                    })
+                end
+            end
+        end
+
+        -- Repinta as janelas com o tema/fonte salvos (os frames foram criados
+        -- antes das SavedVariables carregarem)
+        if FarmBuddyTheme then
+            -- Erro aqui não pode impedir o resto da inicialização
+            local ok, err = pcall(FarmBuddyTheme.Apply, FarmBuddyTheme)
+            if not ok then geterrorhandler()(err) end
         end
 
         -- Migração: inicializa gatherImports se não existir
@@ -236,7 +259,7 @@ eventFrame:SetScript("OnEvent", function(self, event, addonName)
                 )
                 C_Timer.After(4, function()
                     print("|cff00ff00[FarmBuddy]|r " .. string.format(
-                        FarmBuddyL["GatherMate2 data detected! %d nodes imported automatically. Open the Import Manager to view them."],
+                        FarmBuddyL["GatherMate2 data detected! %d nodes imported automatically. Open Settings > Profiles to view them."],
                         parsedData.totalNodes))
                 end)
             end

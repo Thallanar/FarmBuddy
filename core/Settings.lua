@@ -1,99 +1,58 @@
+-- =============================================================================
+-- FarmBuddy - Filtros de categoria (lógica)
+-- =============================================================================
+-- A interface fica em ui/SettingsFrame.lua (seção Filters).
+-- Chave do filtro: "<Grupo>::<Categoria>"; false = escondido.
+-- =============================================================================
+
 TrackerSettings = TrackerSettings or {}
-local expandedSections = {}
-local checkboxes = {}
-local headers = {}
 
-function TrackerSettings:BuildCheckboxes(categories)
-    for _, cb in pairs(checkboxes) do 
-            cb:Hide() 
+-- Grupos ordenados pelo nome exibido
+function TrackerSettings:GetGroups()
+    local groups = {}
+    for name in pairs(FarmTracker.categoryList or {}) do
+        table.insert(groups, name)
     end
-    wipe(checkboxes)
+    table.sort(groups, function(a, b) return FarmBuddyL[a] < FarmBuddyL[b] end)
+    return groups
+end
 
-    for _, h in pairs(headers) do
-        h:Hide()
-    end
-    wipe(headers)
+function TrackerSettings:IsShown(group, category)
+    return FarmTracker:GetProfile().categoryFilters[group .. "::" .. category] ~= false
+end
 
-    local yOffset = -10
+function TrackerSettings:SetShown(group, category, shown)
+    FarmTracker:GetProfile().categoryFilters[group .. "::" .. category] = shown and true or false
+end
 
-    local selectAllCB = CreateFrame("CheckButton", nil, self.scrollChild, "ChatConfigCheckButtonTemplate")
-    selectAllCB:SetPoint("TOPLEFT", 10, -10)
-    selectAllCB.Text:SetText(FarmBuddyL["Select all"])
-
-    local selecting = false -- flag para evitar loop de atualização
-
-    selectAllCB:SetScript("OnClick", function(self)
-        if selecting then return end
-        selecting = true
-        local check = self:GetChecked()
-
-        for sectionName, categoryList in pairs(categories) do
-            for _, category in ipairs(categoryList) do
-                local key = sectionName .. "::" .. category
-                FarmTracker:GetProfile().categoryFilters[key] = check
-            end
-        end
-
-        -- Atualiza os checkboxes abaixo
-        TrackerSettings:BuildCheckboxes(categories)
-
-        -- Atualiza a exibição se necessário
-        if DisplayItem and DisplayItem.UpdateDisplay then
-            DisplayItem:UpdateDisplay(FarmTracker.lootTable)
-        end
-
-        selecting = false
-    end)
-
-    yOffset = -40 -- para dar espaço antes dos headers
-
-    for sectionName, categoryList in pairs(categories) do
-        -- Botão de seção (cabeçalho)
-        local header = CreateFrame("Button", nil, self.scrollChild)
-        header:SetPoint("TOPLEFT", 10, yOffset)
-        header:SetSize(260, 20)
-
-        local label = header:CreateFontString(nil, "OVERLAY", "GameFontHighlight")
-        label:SetPoint("LEFT", 0, 0)
-        label:SetText((expandedSections[sectionName] and "|cff00ff00[-]|r " or "|cffffaa00[+]|r ") .. FarmBuddyL[sectionName])
-
-        header:SetScript("OnClick", function()
-            expandedSections[sectionName] = not expandedSections[sectionName]
-            self:BuildCheckboxes(categories)
-
-            if DisplayItem and DisplayItem.UpdateDisplay then
-                DisplayItem:UpdateDisplay(FarmTracker.lootTable)
-            end
-        end)
-
-        table.insert(headers, header)
-
-        yOffset = yOffset - 25
-
-        if expandedSections[sectionName] then
-            for _, category in ipairs(categoryList) do
-                local cb = CreateFrame("CheckButton", nil, self.scrollChild, "ChatConfigCheckButtonTemplate")
-                cb:SetPoint("TOPLEFT", 30, yOffset)
-                cb.Text:SetText(category)
-
-                local key = sectionName .. "::" .. category
-                local isChecked = FarmTracker:GetProfile().categoryFilters[key] ~= false
-                cb:SetChecked(isChecked)
-
-                cb:SetScript("OnClick", function(self)
-                    FarmTracker:GetProfile().categoryFilters[key] = self:GetChecked()
-                    if DisplayItem and DisplayItem.UpdateDisplay then
-                        DisplayItem:UpdateDisplay(FarmTracker.lootTable)
-                    end
-                end)
-
-                table.insert(checkboxes, cb)
-                yOffset = yOffset - 30
-            end
-            
-            yOffset = yOffset - 10
+function TrackerSettings:SetAll(shown)
+    for group, categories in pairs(FarmTracker.categoryList or {}) do
+        for _, category in ipairs(categories) do
+            self:SetShown(group, category, shown)
         end
     end
+    self:FiltersChanged()
+end
 
-    self.scrollChild:SetHeight(math.abs(yOffset) + 20)
+function TrackerSettings:SetGroup(group, shown)
+    for _, category in ipairs(FarmTracker.categoryList[group] or {}) do
+        self:SetShown(group, category, shown)
+    end
+    self:FiltersChanged()
+end
+
+-- Quantas categorias do grupo estão visíveis
+function TrackerSettings:CountShown(group)
+    local list = FarmTracker.categoryList[group] or {}
+    local shown = 0
+    for _, category in ipairs(list) do
+        if self:IsShown(group, category) then shown = shown + 1 end
+    end
+    return shown, #list
+end
+
+function TrackerSettings:FiltersChanged()
+    if DisplayItem and DisplayItem.UpdateDisplay then
+        DisplayItem:UpdateDisplay(FarmTracker.lootTable)
+    end
 end
