@@ -66,7 +66,7 @@ def extractListview(html):
 
 
 def zoneInfo(html):
-    title = re.search(r'<title>([^<]+?) - Zone - Forever', html)
+    title = re.search(r'<title>([^<]+?) - Zone - (?:WoW )?Forever', html)
     url = re.search(r'wowhead\.com/forever/zone=(\d+)', html)
     if not title or not url:
         raise ValueError('não é uma página de zona do Wowhead Forever')
@@ -88,10 +88,14 @@ def render(zone, zoneID, continent, mobs):
         '-- =============================================================================',
         f'-- FarmBuddy: Forever - DisplayIDs: {zone} ({continent})',
         '-- =============================================================================',
-        '-- Formato: [npcID] = displayID,  -- Nome do mob[, Rare/Elite]',
+        '-- Formato: [npcID] = MobInfo(displayID, profissão),  -- Nome do mob[, Rare/Elite]',
+        '--   profissão: "S" esfolável, "C" dropa tecido, "SC" os dois, "" nenhum,',
+        '--              nil = pendente (o core usa a regra por tipo)',
         f'-- Fonte: Wowhead Forever (zone={zoneID}). displayID 0 = pendente: o mob aparece',
         '-- no mapa com ícone genérico do tipo até o displayID real ser preenchido.',
         '-- =============================================================================',
+        '',
+        'local MobInfo = FarmBuddyForever.MobInfo',
         '',
         f'FarmBuddyForever:RegisterZone("{zone}", {{',
     ]
@@ -106,8 +110,8 @@ def render(zone, zoneID, continent, mobs):
             name = m['name']
             if m.get('classification') in CLASSIFICATION:
                 name += ', ' + CLASSIFICATION[m['classification']]
-            entry = f"    [{m['id']}] = 0,"
-            lines.append(f'{entry:<22}-- {name}')
+            entry = f"[{m['id']}] = MobInfo(0, nil),"
+            lines.append(f'    {entry:<36}-- {name}')
     lines.append('})')
     return '\n'.join(lines) + '\n'
 

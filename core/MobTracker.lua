@@ -89,6 +89,11 @@ local trackingActive = false
 -- Lookup de displayID por npcID (carregado de data/MobDisplayIDs.lua)
 local displayIDLookup = FarmBuddyMobDisplayIDs or {}
 
+-- Profissões por npcID (preenchido por extensões via FarmBuddyAPI:RegisterMobProfessions).
+-- npcID → { skinnable = bool, clothDropper = bool }; sem entrada = regra por tipo.
+FarmBuddyMobProfessions = FarmBuddyMobProfessions or {}
+local professionLookup = FarmBuddyMobProfessions
+
 -- ============================
 -- INICIALIZAÇÃO DE PERFIL
 -- ============================
@@ -117,6 +122,22 @@ end
 -- FILTRO DE PROFISSÃO
 -- ============================
 
+-- Retorna skinnable, clothDropper de um mob: dados registrados por npcID têm
+-- prioridade; sem eles, usa os campos salvos e a regra por tipo
+-- (Fera = esfolável, Humanoide = tecido).
+function FarmBuddyMobTracker:GetProfessionFlags(mobEntry)
+    local known = mobEntry.npcID and professionLookup[mobEntry.npcID]
+    if known then
+        return known.skinnable, known.clothDropper
+    end
+
+    local skinnable = mobEntry.skinnable
+    if skinnable == nil then skinnable = (mobEntry.creatureType == "Beast") end
+    local clothDropper = mobEntry.clothDropper
+    if clothDropper == nil then clothDropper = (mobEntry.creatureType == "Humanoid") end
+    return skinnable == true, clothDropper == true
+end
+
 function FarmBuddyMobTracker:MatchesFilter(mobEntry, filter)
     -- Gate global: só aceita mobs cujo npcID esteja na tabela de DisplayIDs.
     -- Qualquer mob fora dessa lista é ignorado no mapa.
@@ -128,26 +149,14 @@ function FarmBuddyMobTracker:MatchesFilter(mobEntry, filter)
         return true
     end
 
+    local skinnable, clothDropper = self:GetProfessionFlags(mobEntry)
+
     if filter == "skinning" then
-        -- Skinnable explícito, ou Beast por padrão (se skinnable ~= false)
-        if mobEntry.skinnable == true then
-            return true
-        end
-        if mobEntry.skinnable == nil and mobEntry.creatureType == "Beast" then
-            return true
-        end
-        return false
+        return skinnable
     end
 
     if filter == "tailoring" then
-        -- clothDropper explícito, ou Humanoid por padrão (se clothDropper ~= false)
-        if mobEntry.clothDropper == true then
-            return true
-        end
-        if mobEntry.clothDropper == nil and mobEntry.creatureType == "Humanoid" then
-            return true
-        end
-        return false
+        return clothDropper
     end
 
     return true

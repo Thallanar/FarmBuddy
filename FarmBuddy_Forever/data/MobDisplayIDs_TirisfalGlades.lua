@@ -1,126 +1,88 @@
 -- =============================================================================
 -- FarmBuddy: Forever - DisplayIDs: Tirisfal Glades (Eastern Kingdoms)
 -- =============================================================================
--- Formato: [npcID] = displayID,  -- Nome do mob[, Rare/Elite]
+-- Formato: [npcID] = MobInfo(displayID, profissão),  -- Nome do mob[, Rare/Elite]
+--   profissão: "S" esfolável, "C" dropa tecido, "SC" os dois, "" nenhum,
+--              nil = pendente (o core usa a regra por tipo)
 -- Fonte: Wowhead Forever (zone=85). displayID 0 = pendente: o mob aparece
 -- no mapa com ícone genérico do tipo até o displayID real ser preenchido.
 -- =============================================================================
 
+local MobInfo = FarmBuddyForever.MobInfo
+
 FarmBuddyForever:RegisterZone("Tirisfal Glades", {
     -- Beasts
-    [271080] = 0,     -- Blightsculler, Rare
-    [1809] = 0,       -- Carrion Vulture
-    [274300] = 0,     -- Coldrasp, Rare
-    [1815] = 0,       -- Diseased Black Bear
-    [1512] = 0,       -- Duskbat
-    [277882] = 0,     -- Foothills Duskbat
-    [1553] = 0,       -- Greater Duskbat
-    [1513] = 0,       -- Mangy Duskbat
-    [1688] = 0,       -- Night Web Matriarch
-    [1505] = 0,       -- Night Web Spider
-    [277730] = 0,     -- Rabid Forest Wolf
-    [5288] = 0,       -- Rabid Longtooth
-    [1509] = 0,       -- Ragged Scavenger
-    [10357] = 0,      -- Ressan the Needler, Rare
-    [10359] = 0,      -- Sri'skulk, Rare
-    [1554] = 0,       -- Vampiric Duskbat
-    [1822] = 0,       -- Venom Mist Lurker
-    [1555] = 0,       -- Vicious Night Web Spider
-    [1765] = 0,       -- Worg
-    [1504] = 0,       -- Young Night Web Spider
-    [1508] = 0,       -- Young Scavenger
+    [271080] = MobInfo(146542, "S"),         -- Blightsculler, Rare
+    [1815] = MobInfo(1082, "S"),        -- Diseased Black Bear
+    [1512] = MobInfo(4732, "S"),        -- Duskbat
+    [277882] = MobInfo(1954, "S"),         -- Foothills Duskbat
+    [1553] = MobInfo(4734, "S"),        -- Greater Duskbat
+    [1513] = MobInfo(9535, "S"),        -- Mangy Duskbat
+    [277730] = MobInfo(143460, "S"),         -- Rabid Forest Wolf
+    [5288] = MobInfo(3203, "S"),        -- Rabid Longtooth
+    [10357] = MobInfo(9750, "S"),       -- Ressan the Needler, Rare
+    [1554] = MobInfo(8808, "S"),        -- Vampiric Duskbat
+    [1765] = MobInfo(11421, "S"),       -- Worg
 
     -- Humanoids
-    [1665] = 0,       -- Captain Melrache
-    [1662] = 0,       -- Captain Perrine
-    [1664] = 0,       -- Captain Vachon
-    [275437] = 0,     -- Dark Enforcer
-    [267006] = 0,     -- Dark Neophyte
-    [1911] = 0,       -- Deeb, Rare
-    [1936] = 0,       -- Farmer Solliden, Rare
-    [202060] = 0,     -- Frozen Murloc
-    [208196] = 0,     -- Gillgar, Elite
-    [13158] = 0,      -- Lieutenant Sanders
-    [1667] = 0,       -- Meven Korgal
-    [1910] = 0,       -- Muad, Rare
-    [4284] = 0,       -- Scarlet Augur, Elite
-    [1660] = 0,       -- Scarlet Bodyguard
-    [1506] = 0,       -- Scarlet Convert
-    [4285] = 0,       -- Scarlet Disciple, Elite
-    [1538] = 0,       -- Scarlet Friar
-    [238745] = 0,     -- Scarlet Infiltrator, Elite
-    [1507] = 0,       -- Scarlet Initiate
-    [4282] = 0,       -- Scarlet Magician, Elite
-    [1536] = 0,       -- Scarlet Missionary
-    [1539] = 0,       -- Scarlet Neophyte
-    [4280] = 0,       -- Scarlet Preserver, Elite
-    [4281] = 0,       -- Scarlet Scout, Elite
-    [4283] = 0,       -- Scarlet Sentry, Elite
-    [1540] = 0,       -- Scarlet Vanguard
-    [1535] = 0,       -- Scarlet Warrior
-    [1537] = 0,       -- Scarlet Zealot
-    [1934] = 0,       -- Tirisfal Farmer
-    [1935] = 0,       -- Tirisfal Farmhand
-    [6390] = 0,       -- Ulag the Cleaver
-    [250283] = 0,     -- Vile Fin Attacker
-    [1544] = 0,       -- Vile Fin Minor Oracle
-    [1545] = 0,       -- Vile Fin Muckdweller
-    [1543] = 0,       -- Vile Fin Puddlejumper
-    [250282] = 0,     -- Vile Fin Seer
+    [1665] = MobInfo(1739, "C"),        -- Captain Melrache
+    [1662] = MobInfo(1738, "C"),        -- Captain Perrine
+    [1664] = MobInfo(1737, "C"),        -- Captain Vachon
+    [275437] = MobInfo(10391, "C"),         -- Dark Enforcer
+    [267006] = MobInfo(10408, "C"),         -- Dark Neophyte
+    [1936] = MobInfo(3535, "C"),        -- Farmer Solliden, Rare
+    [4284] = MobInfo(2495, "C"),        -- Scarlet Augur, Elite
+    [1660] = MobInfo(3144, "C"),        -- Scarlet Bodyguard
+    [4285] = MobInfo(2505, "C"),        -- Scarlet Disciple, Elite
+    [1538] = MobInfo(2466, "C"),        -- Scarlet Friar
+    [4282] = MobInfo(2512, "C"),        -- Scarlet Magician, Elite
+    [1536] = MobInfo(2468, "C"),        -- Scarlet Missionary
+    [1539] = MobInfo(2469, "C"),        -- Scarlet Neophyte
+    [4280] = MobInfo(2475, "C"),        -- Scarlet Preserver, Elite
+    [4281] = MobInfo(2516, "C"),        -- Scarlet Scout, Elite
+    [4283] = MobInfo(2520, "C"),        -- Scarlet Sentry, Elite
+    [1540] = MobInfo(2481, "C"),        -- Scarlet Vanguard
+    [1535] = MobInfo(2471, "C"),        -- Scarlet Warrior
+    [1537] = MobInfo(2483, "C"),        -- Scarlet Zealot
+    [1934] = MobInfo(3532, "C"),        -- Tirisfal Farmer
+    [1935] = MobInfo(3534, "C"),        -- Tirisfal Farmhand
 
     -- Demons
-    [10356] = 0,      -- Bayne, Rare
-    [1548] = 0,       -- Cursed Darkhound
-    [1547] = 0,       -- Decrepit Darkhound
-    [1549] = 0,       -- Ravenous Darkhound
+    [10356] = MobInfo(7892, "S"),       -- Bayne, Rare
+    [1548] = MobInfo(9020, "S"),        -- Cursed Darkhound
+    [1547] = MobInfo(9021, "S"),        -- Decrepit Darkhound
+    [1549] = MobInfo(3916, "S"),        -- Ravenous Darkhound
 
     -- Undead
-    [1529] = 0,       -- Bleeding Horror
-    [1658] = 0,       -- Captain Dargol
-    [1523] = 0,       -- Cracked Skull Soldier
-    [1917] = 0,       -- Daniel Ulfman
-    [1522] = 0,       -- Darkeye Bonecaster
-    [1657] = 0,       -- Devlin Agamand
-    [10996] = 0,      -- Fallen Hero, Elite
-    [10358] = 0,      -- Fellicent's Shade, Rare
-    [1654] = 0,       -- Gregor Agamand
-    [1527] = 0,       -- Hungering Dead
-    [1918] = 0,       -- Karrel Grayves
-    [1946] = 0,       -- Lillith Nefara
-    [1531] = 0,       -- Lost Soul, Rare
-    [1753] = 0,       -- Maggot Eye
-    [1501] = 0,       -- Mindless Zombie
-    [1655] = 0,       -- Nissa Agamand
-    [1890] = 0,       -- Rattlecage Skeleton
-    [1520] = 0,       -- Rattlecage Soldier
-    [1526] = 0,       -- Ravaged Corpse
-    [276020] = 0,     -- Riptear, Elite
-    [1674] = 0,       -- Rot Hide Gnoll
-    [1941] = 0,       -- Rot Hide Graverobber
-    [1675] = 0,       -- Rot Hide Mongrel
-    [1530] = 0,       -- Rotting Ancestor
-    [1525] = 0,       -- Rotting Dead
-    [1919] = 0,       -- Samuel Fipps
-    [260428] = 0,     -- Shadowvale Lurcher
-    [260431] = 0,     -- Shadowvale Lurcher
-    [260430] = 0,     -- Shadowvale Mystic
-    [260432] = 0,     -- Shadowvale Mystic
-    [1528] = 0,       -- Shambling Horror
-    [16422] = 0,      -- Skeletal Soldier
-    [16423] = 0,      -- Spectral Apparition
-    [1916] = 0,       -- Stephen Bhartec
-    [276089] = 0,     -- The Condemned One, Rare
-    [1656] = 0,       -- Thurman Agamand
-    [1533] = 0,       -- Tormented Spirit, Rare
-    [1534] = 0,       -- Wailing Ancestor
-    [1532] = 0,       -- Wandering Spirit
-    [260396] = 0,     -- Whispering Horror, Elite
-    [1502] = 0,       -- Wretched Zombie
-
-    -- Mechanicals
-    [211955] = 0,     -- Auxiliary Anti-Tamper Mechanism, Elite
-    [211953] = 0,     -- Bulky Protective Ironweave, Elite
-    [276061] = 0,     -- Decrepit Harvester, Rare
-    [211954] = 0,     -- Electrostatic Discharge Shielding, Elite
-    [212252] = 0,     -- Harvest Golem V000-A, Elite
+    [1529] = MobInfo(1198, "C"),        -- Bleeding Horror
+    [1658] = MobInfo(733, "C"),         -- Captain Dargol
+    [1523] = MobInfo(535, "C"),         -- Cracked Skull Soldier
+    [1522] = MobInfo(11398, "C"),       -- Darkeye Bonecaster
+    [1657] = MobInfo(11399, "C"),       -- Devlin Agamand
+    [10996] = MobInfo(10459, "C"),      -- Fallen Hero, Elite
+    [10358] = MobInfo(5430, "C"),       -- Fellicent's Shade, Rare
+    [1654] = MobInfo(646, "C"),         -- Gregor Agamand
+    [1527] = MobInfo(1202, "C"),        -- Hungering Dead
+    [1946] = MobInfo(10772, "C"),       -- Lillith Nefara
+    [1531] = MobInfo(985, "C"),         -- Lost Soul, Rare
+    [1753] = MobInfo(848, "C"),         -- Maggot Eye
+    [1655] = MobInfo(10702, "C"),       -- Nissa Agamand
+    [1520] = MobInfo(200, "C"),         -- Rattlecage Soldier
+    [1526] = MobInfo(1201, "C"),        -- Ravaged Corpse
+    [276020] = MobInfo(148451, "C"),         -- Riptear, Elite
+    [1674] = MobInfo(10852, "C"),       -- Rot Hide Gnoll
+    [1941] = MobInfo(10853, "C"),       -- Rot Hide Graverobber
+    [1675] = MobInfo(847, "C"),         -- Rot Hide Mongrel
+    [1530] = MobInfo(1196, "C"),        -- Rotting Ancestor
+    [1525] = MobInfo(1200, "C"),        -- Rotting Dead
+    [260428] = MobInfo(10978, "C"),         -- Shadowvale Lurcher
+    [260431] = MobInfo(10978, "C"),         -- Shadowvale Lurcher
+    [260430] = MobInfo(9787, "C"),         -- Shadowvale Mystic
+    [260432] = MobInfo(9787, "C"),         -- Shadowvale Mystic
+    [1528] = MobInfo(1197, "C"),        -- Shambling Horror
+    [276089] = MobInfo(201, "C"),         -- The Condemned One, Rare
+    [1656] = MobInfo(1196, "C"),        -- Thurman Agamand
+    [1533] = MobInfo(9534, "C"),        -- Tormented Spirit, Rare
+    [1534] = MobInfo(10752, "C"),       -- Wailing Ancestor
+    [1532] = MobInfo(3227, "C"),        -- Wandering Spirit
 })

@@ -1,91 +1,57 @@
 -- =============================================================================
 -- FarmBuddy: Forever - DisplayIDs: Elwynn Forest (Eastern Kingdoms)
 -- =============================================================================
--- Formato: [npcID] = displayID,  -- Nome do mob[, Rare/Elite]
+-- Formato: [npcID] = MobInfo(displayID, profissão),  -- Nome do mob[, Rare/Elite]
+--   profissão: "S" esfolável, "C" dropa tecido, "SC" os dois, "" nenhum,
+--              nil = pendente (o core usa a regra por tipo)
 -- Fonte: Wowhead Forever (zone=12). displayID 0 = pendente: o mob aparece
 -- no mapa com ícone genérico do tipo até o displayID real ser preenchido.
 -- =============================================================================
 
+local MobInfo = FarmBuddyForever.MobInfo
+
 FarmBuddyForever:RegisterZone("Elwynn Forest", {
     -- Beasts
-    [248299] = 0,     -- Elmpaw, Elite
-    [30] = 0,         -- Forest Spider
-    [1922] = 0,       -- Gray Forest Wolf
-    [119] = 0,        -- Longsnout
-    [525] = 0,        -- Mangy Wolf
-    [276189] = 0,     -- Matriarch Bristlefur, Rare
-    [43] = 0,         -- Mine Spider, Elite
-    [471] = 0,        -- Mother Fang, Elite
-    [390] = 0,        -- Porcine Entourage
-    [330] = 0,        -- Princess
-    [118] = 0,        -- Prowler
-    [539] = 0,        -- Pygmy Venom Web Spider
-    [565] = 0,        -- Rabid Dire Wolf
-    [524] = 0,        -- Rockhide Boar
-    [213] = 0,        -- Starving Dire Wolf
-    [113] = 0,        -- Stonetusk Boar
-    [442] = 0,        -- Tarantula
-    [69] = 0,         -- Timber Wolf
-    [217] = 0,        -- Venom Web Spider
-    [822] = 0,        -- Young Forest Bear
-    [299] = 0,        -- Young Wolf
+    [248299] = MobInfo(706, "S"),       -- Elmpaw, Elite
+    [1922] = MobInfo(380, "S"),         -- Gray Forest Wolf
+    [119] = MobInfo(381, "S"),          -- Longsnout
+    [525] = MobInfo(903, "S"),          -- Mangy Wolf
+    [276189] = MobInfo(806, "S"),       -- Matriarch Bristlefur, Rare
+    [390] = MobInfo(377, "S"),          -- Porcine Entourage
+    [330] = MobInfo(8871, "S"),         -- Princess
+    [118] = MobInfo(11415, "S"),        -- Prowler
+    [565] = MobInfo(802, "S"),          -- Rabid Dire Wolf
+    [524] = MobInfo(389, "S"),          -- Rockhide Boar
+    [213] = MobInfo(801, "S"),          -- Starving Dire Wolf
+    [113] = MobInfo(138616, "S"),       -- Stonetusk Boar
+    [822] = MobInfo(1006, "S"),         -- Young Forest Bear
 
     -- Humanoids
-    [248278] = 0,     -- Croaky, Elite
-    [6093] = 0,       -- Dead-Tooth Jack
-    [583] = 0,        -- Defias Ambusher
-    [116] = 0,        -- Defias Bandit
-    [6866] = 0,       -- Defias Bodyguard
-    [94] = 0,         -- Defias Cutpurse
-    [6846] = 0,       -- Defias Dockmaster
-    [6927] = 0,       -- Defias Dockworker
-    [474] = 0,        -- Defias Rogue Wizard
-    [38] = 0,         -- Defias Thug
-    [276180] = 0,     -- Elder Finseer, Rare
-    [880] = 0,        -- Erlan Drudgemoor
-    [472] = 0,        -- Fedfennel, Rare
-    [202060] = 0,     -- Frozen Murloc
-    [103] = 0,        -- Garrick Padfoot
-    [248474] = 0,     -- Geosculptor Yip, Elite
-    [327] = 0,        -- Goldtooth
-    [100] = 0,        -- Gruff Swiftbite, Rare
-    [448] = 0,        -- Hogger, Elite
-    [476] = 0,        -- Kobold Geomancer
-    [80] = 0,         -- Kobold Laborer
-    [40] = 0,         -- Kobold Miner
-    [475] = 0,        -- Kobold Tunneler
-    [6] = 0,          -- Kobold Vermin
-    [257] = 0,        -- Kobold Worker
-    [276246] = 0,     -- Mistmantle Prowler, Elite
-    [99] = 0,         -- Morgaine the Sly, Rare
-    [473] = 0,        -- Morgan the Collector
-    [285] = 0,        -- Murloc
-    [46] = 0,         -- Murloc Forager
-    [732] = 0,        -- Murloc Lurker
-    [735] = 0,        -- Murloc Streamrunner
-    [79] = 0,         -- Narg the Taskmaster, Rare
-    [248464] = 0,     -- Nimsy, Elite
-    [478] = 0,        -- Riverpaw Outrunner
-    [97] = 0,         -- Riverpaw Runt
-    [60] = 0,         -- Ruklar the Trapper
-    [248362] = 0,     -- Shinyfinder Narf, Elite
-    [881] = 0,        -- Surena Caledon
-    [61] = 0,         -- Thuros Lightfingers, Rare
-
-    -- Elementals
-    [248463] = 0,     -- Rumbler
-
-    -- Undead
-    [210] = 0,        -- Bone Chewer
-    [2044] = 0,       -- Forlorn Spirit
-    [16422] = 0,      -- Skeletal Soldier
-    [16423] = 0,      -- Spectral Apparition
-    [210537] = 0,     -- Undying Laborer, Elite
-
-    -- Dragonkin
-    [14388] = 0,      -- Rogue Black Drake, Elite
-
-    -- Mechanicals
-    [177469] = 0,     -- Boss Dummy, Elite
-    [176443] = 0,     -- Dummy
+    [6093] = MobInfo(4947, "C"),        -- Dead-Tooth Jack
+    [583] = MobInfo(184, "C"),          -- Defias Ambusher
+    [116] = MobInfo(2357, "C"),         -- Defias Bandit
+    [6866] = MobInfo(2340, "C"),        -- Defias Bodyguard
+    [94] = MobInfo(2361, "C"),          -- Defias Cutpurse
+    [6846] = MobInfo(7849, "C"),        -- Defias Dockmaster
+    [6927] = MobInfo(2357, "C"),        -- Defias Dockworker
+    [474] = MobInfo(2359, "C"),         -- Defias Rogue Wizard
+    [880] = MobInfo(3322, "C"),         -- Erlan Drudgemoor
+    [472] = MobInfo(175, "C"),          -- Fedfennel, Rare
+    [248474] = MobInfo(10911, "C"),     -- Geosculptor Yip, Elite
+    [327] = MobInfo(2299, "C"),         -- Goldtooth
+    [100] = MobInfo(175, "C"),          -- Gruff Swiftbite, Rare
+    [448] = MobInfo(384, "C"),          -- Hogger, Elite
+    [476] = MobInfo(163, "C"),          -- Kobold Geomancer
+    [40] = MobInfo(373, "C"),           -- Kobold Miner
+    [475] = MobInfo(139, "C"),          -- Kobold Tunneler
+    [99] = MobInfo(3320, "C"),          -- Morgaine the Sly, Rare
+    [473] = MobInfo(2074, "C"),         -- Morgan the Collector
+    [79] = MobInfo(774, "C"),           -- Narg the Taskmaster, Rare
+    [248464] = MobInfo(10911, "C"),     -- Nimsy, Elite
+    [478] = MobInfo(512, "C"),          -- Riverpaw Outrunner
+    [97] = MobInfo(10791, "C"),         -- Riverpaw Runt
+    [60] = MobInfo(2153, "C"),          -- Ruklar the Trapper
+    [248362] = MobInfo(774, "C"),       -- Shinyfinder Narf, Elite
+    [881] = MobInfo(3321, "C"),         -- Surena Caledon
+    [61] = MobInfo(3341, "C"),          -- Thuros Lightfingers, Rare
 })

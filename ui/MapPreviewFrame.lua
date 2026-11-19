@@ -1020,10 +1020,12 @@ local function SetupMobPin(pin, mob, displayMode)
     -- Tooltip
     local typePT = FarmBuddyMobTracker.creatureTypeLabel[mob.creatureType] or mob.creatureType
     local profLabel = ""
-    if mob.skinnable then
+    local skinnable, clothDropper = FarmBuddyMobTracker:GetProfessionFlags(mob)
+    if skinnable then
         profLabel = "|cffcc6600" .. L["Skinning"] .. "|r"
-    elseif mob.clothDropper then
-        profLabel = "|cff9933cc" .. L["Tailoring"] .. "|r"
+    end
+    if clothDropper then
+        profLabel = profLabel .. (profLabel ~= "" and ", " or "") .. "|cff9933cc" .. L["Tailoring"] .. "|r"
     end
 
     pin.tooltipText = mob.name or "Mob"
