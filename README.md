@@ -68,6 +68,11 @@ FarmBuddy is free software: you can redistribute it and/or modify it under the t
 
 ## Changelog
 
+### v1.11.0
+
+- **Accurate Skinning and Tailoring filters** — On the Mob Map, mobs can now be marked as skinnable or as dropping cloth, one by one, instead of by creature type; FarmBuddy: Forever 1.1.0 uses this for its zones
+- **Both professions in the tooltip** — Mobs that are skinnable and also drop cloth show both professions in the map tooltip
+
 ### v1.10.2
 
 - **New logo** — FarmBuddy's own logo on the minimap button and in the addon list (FarmBuddy: Forever too)
@@ -81,12 +86,3 @@ FarmBuddy is free software: you can redistribute it and/or modify it under the t
 - **Fix: GatherMate2 string import/export** — Pasting or exporting a GatherMate2 string no longer fails with a Base64 error
 - **Fix: main window closing by itself** — Pressing ESC or opening the world map no longer closes the main window; use its close button or `/farmbuddy`
 - **Simpler history** — The history detail no longer shows gold per hour
-
-### v1.10.0
-
-- **New look** — Every window was redesigned in a Blizzard-style frame with clearer spacing; the loot list now lives inside the main window
-- **Time limit and free mode** — New Timer and Time limit tabs: set a limit with an alarm and optional auto-stop, or farm in free mode. The mode is locked while a session runs
-- **New history** — Sessions grouped by day with a detail panel (duration, items, value, gold per hour, mode); delete one session or clear all
-- **New settings** — Appearance (themes, fonts, scale, opacity), Alerts (alarm sound and channel), searchable Filters and Profiles (copy from another character, export/import string, GatherMate2 imports)
-- **What's new window** — The changelog shows up once after each update; type `/farmbuddy changelog` to open it again
-- **Fix: main window after /reload** — The main window now stays open after a reload if it was open before

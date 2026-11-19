@@ -8,6 +8,13 @@
 
 FarmBuddyChangelog = {
     {
+        version = "1.11.0",
+        notes = {
+            { "Accurate Skinning and Tailoring filters", "On the Mob Map, mobs can now be marked as skinnable or as dropping cloth, one by one, instead of by creature type. FarmBuddy: Forever 1.1.0 uses this for its zones." },
+            { "Both professions in the tooltip", "Mobs that are skinnable and also drop cloth show both professions in the map tooltip." },
+        },
+    },
+    {
         version = "1.10.2",
         notes = {
             { "New logo", "FarmBuddy's own logo on the minimap button and in the addon list (FarmBuddy: Forever too)." },
@@ -23,17 +30,6 @@ FarmBuddyChangelog = {
             { "Fix: GatherMate2 string import/export", "Pasting or exporting a GatherMate2 string no longer fails with a Base64 error." },
             { "Fix: main window closing by itself", "Pressing ESC or opening the world map no longer closes the main window. Use its close button or /farmbuddy." },
             { "Simpler history", "The history detail no longer shows gold per hour." },
-        },
-    },
-    {
-        version = "1.10.0",
-        notes = {
-            { "New look", "Every window was redesigned in a Blizzard-style frame with clearer spacing. The loot list now lives inside the main window." },
-            { "Time limit and free mode", "New Timer and Time limit tabs: set a limit with an alarm and optional auto-stop, or farm in free mode. The mode is locked while a session runs." },
-            { "New history", "Sessions grouped by day with a detail panel (duration, items, value, gold per hour and mode). Delete one session or clear all." },
-            { "New settings", "Appearance (themes, fonts, scale, opacity), Alerts (alarm sound and channel), searchable Filters and Profiles (copy from another character, export/import string, GatherMate2 imports)." },
-            { "What's new window", "This window shows up once after each update. Type /farmbuddy changelog to open it again." },
-            { "Fix: main window after /reload", "The main window now stays open after a reload if it was open before." },
         },
     },
 }

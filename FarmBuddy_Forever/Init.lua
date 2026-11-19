@@ -4,8 +4,10 @@
 -- Extensão com os mobs das zonas clássicas do WoW: Forever. Só carrega no
 -- cliente Forever (o TOC lista apenas a Interface dele) e depende do core.
 --
--- Os arquivos de zona em data/ chamam FarmBuddyForever:RegisterZone(name, ids),
--- que repassa para FarmBuddyAPI:RegisterMobDisplayIDs no core.
+-- Os arquivos de zona em data/ chamam FarmBuddyForever:RegisterZone(name, mobs),
+-- com cada mob no formato [npcID] = MobInfo(displayID, profissão). O RegisterZone
+-- separa os dados e repassa para FarmBuddyAPI:RegisterMobDisplayIDs e
+-- FarmBuddyAPI:RegisterMobProfessions no core.
 -- =============================================================================
 
 local ADDON_NAME = ...
@@ -43,8 +45,28 @@ else
     end)
 end
 
+-- Dados de um mob nos arquivos de zona:
+--   displayID  = modelo do retrato no mapa (0 = pendente, ícone genérico do tipo)
+--   profession = "S" (esfolável), "C" (dropa tecido), "SC" (os dois), "" (nenhum)
+--                ou nil (pendente: o core usa a regra por tipo)
+function FarmBuddyForever.MobInfo(displayID, profession)
+    return { displayID = displayID, profession = profession }
+end
+
 -- Chamado por cada data/MobDisplayIDs_<Zona>.lua
-function FarmBuddyForever:RegisterZone(zoneName, ids)
+function FarmBuddyForever:RegisterZone(zoneName, mobs)
     if not self.ready then return end
-    self.zones[zoneName] = FarmBuddyAPI:RegisterMobDisplayIDs(ids)
+
+    local displayIDs, professions = {}, {}
+    for npcID, info in pairs(mobs) do
+        displayIDs[npcID] = info.displayID
+        professions[npcID] = info.profession
+    end
+
+    self.zones[zoneName] = FarmBuddyAPI:RegisterMobDisplayIDs(displayIDs)
+    -- RegisterMobProfessions só existe a partir do FarmBuddy 1.11.0; em cores
+    -- mais antigos o filtro continua usando a regra por tipo.
+    if FarmBuddyAPI.RegisterMobProfessions then
+        FarmBuddyAPI:RegisterMobProfessions(professions)
+    end
 end

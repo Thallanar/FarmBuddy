@@ -1,93 +1,65 @@
 -- =============================================================================
 -- FarmBuddy: Forever - DisplayIDs: Teldrassil (Kalimdor)
 -- =============================================================================
--- Formato: [npcID] = displayID,  -- Nome do mob[, Rare/Elite]
+-- Formato: [npcID] = MobInfo(displayID, profissão),  -- Nome do mob[, Rare/Elite]
+--   profissão: "S" esfolável, "C" dropa tecido, "SC" os dois, "" nenhum,
+--              nil = pendente (o core usa a regra por tipo)
 -- Fonte: Wowhead Forever (zone=141). displayID 0 = pendente: o mob aparece
 -- no mapa com ícone genérico do tipo até o displayID real ser preenchido.
 -- =============================================================================
 
+local MobInfo = FarmBuddyForever.MobInfo
+
 FarmBuddyForever:RegisterZone("Teldrassil", {
     -- Beasts
-    [272096] = 0,     -- Befouled Webwood
-    [14430] = 0,      -- Duskstalker, Rare
-    [2033] = 0,       -- Elder Nightsaber
-    [2034] = 0,       -- Feral Nightsaber
-    [2001] = 0,       -- Giant Webwood Spider
-    [1994] = 0,       -- Githyiss the Vile
-    [7319] = 0,       -- Lady Sathrah
-    [2032] = 0,       -- Mangy Nightsaber
-    [209928] = 0,     -- Mowgh, Rare
-    [2042] = 0,       -- Nightsaber
-    [2043] = 0,       -- Nightsaber Stalker
-    [276101] = 0,     -- Nightscreech, Rare
-    [1997] = 0,       -- Strigid Hunter
-    [1995] = 0,       -- Strigid Owl
-    [1996] = 0,       -- Strigid Screecher
-    [1985] = 0,       -- Thistle Boar
-    [1998] = 0,       -- Webwood Lurker
-    [2000] = 0,       -- Webwood Silkspinner
-    [1986] = 0,       -- Webwood Spider
-    [1999] = 0,       -- Webwood Venomfang
-    [2031] = 0,       -- Young Nightsaber
-    [1984] = 0,       -- Young Thistle Boar
+    [14430] = MobInfo(11453, "S"),      -- Duskstalker, Rare
+    [2033] = MobInfo(3030, "S"),        -- Elder Nightsaber
+    [2034] = MobInfo(3030, "S"),        -- Feral Nightsaber
+    [2032] = MobInfo(11448, "S"),       -- Mangy Nightsaber
+    [2042] = MobInfo(6805, "S"),        -- Nightsaber
+    [2043] = MobInfo(14318, "S"),       -- Nightsaber Stalker
+    [1985] = MobInfo(6807, "S"),        -- Thistle Boar
+    [1984] = MobInfo(8869, "S"),        -- Young Thistle Boar
 
     -- Humanoids
-    [2162] = 0,       -- Agal
-    [2019] = 0,       -- Bloodfeather Fury
-    [2015] = 0,       -- Bloodfeather Harpy
-    [2021] = 0,       -- Bloodfeather Matriarch
-    [2017] = 0,       -- Bloodfeather Rogue
-    [2018] = 0,       -- Bloodfeather Sorceress
-    [2020] = 0,       -- Bloodfeather Wind Witch
-    [7234] = 0,       -- Ferocitas the Dream Eater
-    [14431] = 0,      -- Fury Shelda, Rare
-    [2152] = 0,       -- Gnarlpine Ambusher
-    [2011] = 0,       -- Gnarlpine Augur
-    [2013] = 0,       -- Gnarlpine Avenger
-    [2010] = 0,       -- Gnarlpine Defender
-    [2007] = 0,       -- Gnarlpine Gardener
-    [11690] = 0,      -- Gnarlpine Instigator
-    [7235] = 0,       -- Gnarlpine Mystic
-    [2012] = 0,       -- Gnarlpine Pathfinder
-    [2009] = 0,       -- Gnarlpine Shaman
-    [2014] = 0,       -- Gnarlpine Totemic
-    [2006] = 0,       -- Gnarlpine Ursa
-    [2008] = 0,       -- Gnarlpine Warrior
-    [1993] = 0,       -- Greenpaw
-    [14429] = 0,      -- Grimmaw, Rare
-    [272034] = 0,     -- Hatescreech
-    [6911] = 0,       -- Minion of Sethir
-    [7318] = 0,       -- Rageclaw
-    [2039] = 0,       -- Ursal the Mauler
-    [14428] = 0,      -- Uruson, Rare
-    [272044] = 0,     -- Windmistress Gaedress
-    [272046] = 0,     -- Witchmother Arysa
+    [2162] = MobInfo(936, "C"),         -- Agal
+    [2019] = MobInfo(3022, "C"),        -- Bloodfeather Fury
+    [2015] = MobInfo(3021, "C"),        -- Bloodfeather Harpy
+    [2021] = MobInfo(6813, "C"),        -- Bloodfeather Matriarch
+    [2017] = MobInfo(6812, "C"),        -- Bloodfeather Rogue
+    [2018] = MobInfo(2296, "C"),        -- Bloodfeather Sorceress
+    [2020] = MobInfo(10869, "C"),       -- Bloodfeather Wind Witch
+    [7234] = MobInfo(1996, "C"),        -- Ferocitas the Dream Eater
+    [14431] = MobInfo(2296, "C"),       -- Fury Shelda, Rare
+    [2152] = MobInfo(3024, "C"),        -- Gnarlpine Ambusher
+    [2011] = MobInfo(3024, "C"),        -- Gnarlpine Augur
+    [2013] = MobInfo(6803, "C"),        -- Gnarlpine Avenger
+    [2010] = MobInfo(6801, "C"),        -- Gnarlpine Defender
+    [2007] = MobInfo(6799, "C"),        -- Gnarlpine Gardener
+    [7235] = MobInfo(6804, "C"),        -- Gnarlpine Mystic
+    [2012] = MobInfo(6802, "C"),        -- Gnarlpine Pathfinder
+    [2009] = MobInfo(897, "C"),         -- Gnarlpine Shaman
+    [2014] = MobInfo(936, "C"),         -- Gnarlpine Totemic
+    [2006] = MobInfo(6798, "C"),        -- Gnarlpine Ursa
+    [2008] = MobInfo(6800, "C"),        -- Gnarlpine Warrior
+    [1993] = MobInfo(6819, "C"),        -- Greenpaw
+    [14429] = MobInfo(1011, "C"),       -- Grimmaw, Rare
+    [272034] = MobInfo(969, "C"),         -- Hatescreech
+    [6911] = MobInfo(2013, "C"),        -- Minion of Sethir
+    [7318] = MobInfo(6231, "C"),        -- Rageclaw
+    [2039] = MobInfo(6818, "C"),        -- Ursal the Mauler
+    [14428] = MobInfo(6818, "C"),       -- Uruson, Rare
+    [272044] = MobInfo(1255, "C"),         -- Windmistress Gaedress
+    [272046] = MobInfo(2143, "C"),         -- Witchmother Arysa
 
     -- Demons
-    [2004] = 0,       -- Dark Sprite
-    [209812] = 0,     -- Fallenroot Poacher
-    [1988] = 0,       -- Grell
-    [1989] = 0,       -- Grellkin
-    [2038] = 0,       -- Lord Melenas
-    [2002] = 0,       -- Rascal Sprite
-    [6909] = 0,       -- Sethir the Ancient
-    [2003] = 0,       -- Shadow Sprite
-    [14432] = 0,      -- Threggil, Rare
-    [2005] = 0,       -- Vicious Grell
-    [6128] = 0,       -- Vorlus Vilehoof
-    [272116] = 0,     -- Xethorr the Wicked, Elite
-
-    -- Elementals
-    [3535] = 0,       -- Blackmoss the Fetid, Rare
-    [275708] = 0,     -- Blooming Lasher
-    [3569] = 0,       -- Bogling
-    [2030] = 0,       -- Elder Timberling
-    [275703] = 0,     -- Lasher Sproutling
-    [2166] = 0,       -- Oakenscowl, Elite
-    [2022] = 0,       -- Timberling
-    [2025] = 0,       -- Timberling Bark Ripper
-    [2029] = 0,       -- Timberling Mire Beast
-    [2027] = 0,       -- Timberling Trampler
-    [206245] = 0,     -- Unleashed Nature Spirit
-    [276099] = 0,     -- Wrathvine, Rare
+    [2004] = MobInfo(568, "C"),         -- Dark Sprite
+    [2038] = MobInfo(1013, "C"),        -- Lord Melenas
+    [2002] = MobInfo(3023, "C"),        -- Rascal Sprite
+    [6909] = MobInfo(11339, "C"),       -- Sethir the Ancient
+    [2003] = MobInfo(6809, "C"),        -- Shadow Sprite
+    [14432] = MobInfo(904, "C"),        -- Threggil, Rare
+    [2005] = MobInfo(6811, "C"),        -- Vicious Grell
+    [6128] = MobInfo(2015, "C"),        -- Vorlus Vilehoof
+    [272116] = MobInfo(2011, "C"),         -- Xethorr the Wicked, Elite
 })
