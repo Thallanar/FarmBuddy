@@ -21,9 +21,9 @@ World of Warcraft/<Forever game folder>/Interface/AddOns/FarmBuddy_Forever
 
 | Continent | Zones |
 |---|---|
-| Kalimdor | Teldrassil, Mulgore, Durotar, Darkshore, The Barrens, Ashenvale, Stonetalon Mountains, Thousand Needles |
-| Eastern Kingdoms | Dun Morogh, Elwynn Forest, Tirisfal Glades, Loch Modan, Westfall, Silverpine Forest, Duskwood, Hillsbrad Foothills, Redridge Mountains, Wetlands |
-| New in Forever | Zephras Isle |
+| Kalimdor | Teldrassil, Mulgore, Durotar, Darkshore, The Barrens, Ashenvale, Stonetalon Mountains, Thousand Needles, Desolace, Dustwallow Marsh, Tanaris, Azshara, Felwood, Feralas, Silithus, Un'Goro Crater, Winterspring |
+| Eastern Kingdoms | Dun Morogh, Elwynn Forest, Tirisfal Glades, Loch Modan, Westfall, Silverpine Forest, Duskwood, Hillsbrad Foothills, Redridge Mountains, Wetlands, Alterac Mountains, Arathi Highlands, Badlands, Stranglethorn Vale, Swamp of Sorrows, Blasted Lands, Burning Steppes, Deadwind Pass, Eastern Plaguelands, Searing Gorge, The Hinterlands, Western Plaguelands |
+| New in Forever | Zephras Isle, Riverglades |
 
 Only mobs worth farming are listed: each one is skinnable, drops cloth, or both.
 
@@ -39,6 +39,9 @@ GPLv3, same as FarmBuddy.
 
 ## Changelog
 
+### v1.1.1
+- **All classic zones from level 21 to 60** — 22 new zones: Desolace, Dustwallow Marsh, Tanaris, Azshara, Felwood, Feralas, Silithus, Un'Goro Crater, Winterspring, Alterac Mountains, Arathi Highlands, Badlands, Stranglethorn Vale, Swamp of Sorrows, Blasted Lands, Burning Steppes, Deadwind Pass, Eastern Plaguelands, Searing Gorge, The Hinterlands, Western Plaguelands and Riverglades (41 zones, 2380 mobs)
+
 ### v1.1.0
 - **All zones up to level 20** — 9 new zones: The Barrens, Ashenvale, Stonetalon Mountains, Thousand Needles, Silverpine Forest, Duskwood, Hillsbrad Foothills, Redridge Mountains and Wetlands (19 zones, 1100 mobs)
 - **3D portraits** — Most mobs now show their real portrait on the Mob Map instead of a type icon
@@ -47,10 +50,3 @@ GPLv3, same as FarmBuddy.
 
 ### v1.0.1
 - **New icon** — The addon list now shows the FarmBuddy logo
-
-### v1.0.0
-- **Initial release** — 10 zones and 754 hostile mobs on the Mob Map
-  - **Kalimdor:** Teldrassil, Mulgore, Durotar, Darkshore
-  - **Eastern Kingdoms:** Dun Morogh, Elwynn Forest, Tirisfal Glades, Loch Modan, Westfall
-  - **New in Forever:** Zephras Isle
-- Mobs use type icons on the map for now; 3D portraits will come in a future update

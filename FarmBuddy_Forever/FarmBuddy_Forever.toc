@@ -2,7 +2,7 @@
 ## Title: FarmBuddy: |cffffd100Forever|r
 ## Notes: Classic zone mob database for FarmBuddy on WoW: Forever
 ## Notes-ptBR: Banco de mobs das zonas clássicas para o FarmBuddy no WoW: Forever
-## Version: 1.1.0
+## Version: 1.1.1
 ## Author: Thallanar
 ## X-License: GPLv3
 ## IconTexture: Interface\AddOns\FarmBuddy\icon\logo.png
@@ -22,6 +22,15 @@ data/MobDisplayIDs_TheBarrens.lua
 data/MobDisplayIDs_Ashenvale.lua
 data/MobDisplayIDs_StonetalonMountains.lua
 data/MobDisplayIDs_ThousandNeedles.lua
+data/MobDisplayIDs_Desolace.lua
+data/MobDisplayIDs_DustwallowMarsh.lua
+data/MobDisplayIDs_Tanaris.lua
+data/MobDisplayIDs_Azshara.lua
+data/MobDisplayIDs_Felwood.lua
+data/MobDisplayIDs_Feralas.lua
+data/MobDisplayIDs_Silithus.lua
+data/MobDisplayIDs_UnGoroCrater.lua
+data/MobDisplayIDs_Winterspring.lua
 
 # Eastern Kingdoms
 data/MobDisplayIDs_DunMorogh.lua
@@ -34,6 +43,19 @@ data/MobDisplayIDs_Duskwood.lua
 data/MobDisplayIDs_HillsbradFoothills.lua
 data/MobDisplayIDs_RedridgeMountains.lua
 data/MobDisplayIDs_Wetlands.lua
+data/MobDisplayIDs_AlteracMountains.lua
+data/MobDisplayIDs_ArathiHighlands.lua
+data/MobDisplayIDs_Badlands.lua
+data/MobDisplayIDs_StranglethornVale.lua
+data/MobDisplayIDs_SwampofSorrows.lua
+data/MobDisplayIDs_BlastedLands.lua
+data/MobDisplayIDs_BurningSteppes.lua
+data/MobDisplayIDs_DeadwindPass.lua
+data/MobDisplayIDs_EasternPlaguelands.lua
+data/MobDisplayIDs_SearingGorge.lua
+data/MobDisplayIDs_TheHinterlands.lua
+data/MobDisplayIDs_WesternPlaguelands.lua
 
 # Zonas novas do Forever
 data/MobDisplayIDs_ZephrasIsle.lua
+data/MobDisplayIDs_Riverglades.lua
