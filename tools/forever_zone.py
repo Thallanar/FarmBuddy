@@ -125,9 +125,14 @@ def main(args):
     tocLines = {}
     for path in files:
         html = open(path, encoding='utf-8').read()
-        zone, zoneID = zoneInfo(html)
-        continent = continentOf(zoneID)
-        mobs = [n for n in extractListview(html) if keep(n, zoneID)]
+        try:
+            zone, zoneID = zoneInfo(html)
+            continent = continentOf(zoneID)
+            mobs = [n for n in extractListview(html) if keep(n, zoneID)]
+        except ValueError as e:
+            # Um arquivo ruim não interrompe os outros
+            print(f'ERRO    {os.path.basename(path)}: {e}')
+            continue
         fileName = 'MobDisplayIDs_' + re.sub(r"[^A-Za-z0-9]", '', zone) + '.lua'
         out = os.path.join(OUT_DIR, fileName)
         if os.path.exists(out) and not force:
